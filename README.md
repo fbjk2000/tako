@@ -21,7 +21,8 @@
   <a href="#api-reference">API Reference</a> •
   <a href="#external-api-v1">External API (v1)</a> •
   <a href="#integrations">Integrations</a> •
-  <a href="#recent-updates-aprmay-2026">Recent Updates</a>
+  <a href="#recent-updates-aprmay-2026">Recent Updates</a> •
+  <a href="#pending--roadmap">Roadmap</a>
 </p>
 
 ---
@@ -37,6 +38,7 @@
   - **Sentinel suggestions** (Phase 2) — daily 08:30 + Mon 06:00 catch-up cron walks the last 7 days of inbound email + activity, classifies threads via Haiku, extracts up to 3 grounded suggestions per positive thread via Sonnet, dedups against pending + last-7-days dismissed via source-hash, caps at 5 pending suggestions per user. Each carries a "why now" reasoning line. Strip across the top of /tasks; one-click Accept (promotes to a real task) / Dismiss (kept for dedup window).
   - **Multi-collaborators + sub-nav** (Phase 2.1) — tasks have `assigned_to` (owner) plus `collaborators[]` (multi-person). Reassignment + collaborator-add fires in-app + email notifications via the cascade helper. Default Pulse scope is "involved" (owner OR collaborator) — closes the pre-2.1 hole where every user could see every task. Contextual left **TaskNav** with FOCUS (Today / Overdue / This week / Snoozed) · SURFACES (By deal / contact / campaign / project / Delegated) · SMART LISTS (4 outcome-driven lists) · BY OWNER (admin-only). Counts via `GET /api/tasks/smart-list-counts`. **NextSteps** AI-suggested actions appear in the Lens dock (Draft email · Add task · Block calendar) following the existing draft-email pattern.
   - **Constellation + Calendar + ⌘K + Janitor** (Phase 3, closing chapter) — three new tabs on /tasks (Pulse | Constellation | Calendar) driven by `?view=`. **Constellation** is a hand-rolled radial SVG: entities arranged on a circle, tasks orbit their primary entity, halos tinted by urgency_signal (amber win-window / coral stalled / teal quiet), curved Bézier arms ("octopus arms"), cross-entity dashed teal links, pulsing ring on overdue task nodes. Cached 1h server-side. **Calendar auto-scheduler** — `POST /api/tasks/schedule` reads busy intervals from Google Calendar cache + scheduled_calls + time-pinned tasks, greedy-fits the day's involved-scope tasks (largest first; deep-work prefers morning, admin prefers afternoon). **Global ⌘K palette** — mounts once at app root, fires from any signed-in route (modifier-gated so plain "k" in inputs doesn't trigger), 300ms debounce → `POST /api/tasks/parse` → live preview with resolved entity chips → Enter creates the task. TopBar pill restyled to "⌘ capture" + clickable. **Janitor Sentinel slice** — sister to the email slice; finds deals with `last_touched_at < now-14d` not in closed-stages, generates one grounded suggestion per stalled deal (cap 3/user/day, source-hash anchored on `(deal_id, stage, ISO-week)` so a still-stalled deal next Monday produces a fresh suggestion). Same Mon-Fri 08:30 + Mon 06:00 cron. Manual trigger via `run-janitor-once.yml` workflow.
+  - **Today's Focus card (Phase B)** — daily TaskRanker agent at Mon-Fri 06:55 Europe/London (5 minutes ahead of the campaign-runner so the focus card is fresh before any new step-2/3/4 tasks land). Per-user `priority_mode`: **Revenue** (deals near close, warm reply windows, high-value campaigns) · **Cost** (vendor renewals, expense audits, recurring-spend reviews) · **Balanced** (60/40 weighted blend). Three-mode pill on the focus card switches mode + instantly re-ranks (no 60s wait for the next cron). Top 3 still-open tasks render at the top of `/tasks`, with a one-line italic AI rationale per row (e.g. "overdue + warm reply window"). Rolling: when you complete a task, the next ranked one auto-promotes from the cached `ranked[]`. Manual **Refresh** button re-ranks on demand (rate-limited to 1/min/user). **Reserved**: greyed-out "Include private life" toggle wired schema-side (`users.include_private_chores` + `task.source` field) for the future Private Chores project.
   - The old kanban + list task views, subtasks/checklists, and comments were retired with the Pulse rewrite — they re-land in a future phase if usage signals call for them.
 - **Projects** — Group tasks under deals, progress tracking, clickable task detail from project context, auto-created chat channels, team members
 - **Companies** — Target company management with industry, size, and contact tracking. **AI-native typeahead** suggests existing org records + Claude lookups when adding a new company; **AI Enrich** fills missing fields (industry, size, location, founded year, HQ, competitors, key products) on existing records. Single-record and bulk-up-to-20 enrich.
@@ -75,6 +77,7 @@
 - **Source scaffold + architecture docs** — Reference scaffold (architecture write-up, integration guide, agent + scheduled-task Python files) lives at [`docs/Automation/`](docs/Automation/). Files promoted from there into `backend/agents/` and `backend/scheduled/` are the live ones; the scaffold copies stay as "what was originally proposed" reference for the deferred pieces above.
 
 ### Communication
+- **Inbox (TAKO Mail Phase 1)** — Native email integration via IMAP / SMTP. Three-pane view at `/inbox`: account switcher · chronological list · selected message. **Setup wizard** at `/settings/email/add` with provider-specific guides for Gmail · Outlook / Microsoft 365 · iCloud · Custom (Fastmail / Migadu / your own server). **App-password flow**, no OAuth in Phase 1 (Phase 3 lands `Sign in with Google` + Microsoft Graph push). **Personal accounts + admin-only shared mailboxes** with the assignment / "Create task from email" surface for distributing inbound. **AI summary** on every inbound message (1-2 sentences via Haiku, in the recipient's TAKO language; cap-block returns empty rather than crashing the cycle). **Manual "Log to CRM"** action — explicit user choice (strategy memo decision: no auto-attach), multi-select picker over contacts / deals / companies. **Compose** with tiptap rich-text (bold / italic / link / bullet / numbered), variable-template-aware (`{{first_name}}` / `{{company}}` etc. — same vocabulary the campaign sender uses), localStorage draft persistence keyed by composeId so accidentally closing doesn't lose work. **Sent-folder sync** via IMAP APPEND so messages composed in TAKO appear in your real Sent folder threaded correctly. **Strategy memo decisions locked**: metadata + AI summary stored, NEVER full bodies (fetched on demand from your IMAP server when opened); no relays (your SMTP, your deliverability); no tracking pixels, ever. **30s polling** on `/inbox` while on the page; **60s active-cadence / 5min sleeper** APScheduler poll cycle in the background. **Server-side delete reconcile** — UID-compare every cycle so deletes in Apple Mail / Gmail web propagate to TAKO; **Refresh button triggers an on-demand poll** (not just a re-paint) so the gap closes within seconds rather than 60s. **Bell pings** on inbound from a known CRM contact / lead (newsletters / unknown senders silent — no bell-spam). **Backfill skips AI summary + bell** so cold-start doesn't burn the AI cap or dump 200 notifications on day-one connection. **Hover-row trash + detail-header Delete** with optional "also remove from real mailbox" checkbox (IMAP `STORE \Deleted` + EXPUNGE). **Compose pre-fills To** from the linked contact (preferred) → linked lead → primary contact at the company, with full overwrite. Master credential key (`TAKO_EMAIL_CRED_KEY`, libsodium secretbox) is non-negotiable: backend refuses to start without it. Production setup walkthrough at [`docs/email/PRODUCTION_SETUP.md`](docs/email/PRODUCTION_SETUP.md).
 - **Outbound Calling** — Twilio integration for direct calls from the CRM
 - **Inbound Calls** — Auto-greeting, voicemail recording, caller identification
 - **Call Scheduling** — Calendar-based scheduling with configurable reminders
@@ -330,6 +333,12 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 # AI (platform key — all licensed orgs use this automatically)
 ANTHROPIC_API_KEY=sk-ant-...
+
+# TAKO Mail — credential encryption master key (32 random bytes, base64).
+# Backend refuses to start without this. Generate with:
+#   python -c 'import secrets, base64; print(base64.b64encode(secrets.token_bytes(32)).decode())'
+# Full setup walkthrough: docs/email/PRODUCTION_SETUP.md
+TAKO_EMAIL_CRED_KEY=
 
 # Invoicing
 COMPANY_VAT_NUMBER=GB123456789
@@ -779,6 +788,21 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–May 2026)
 
+### Late May 2026 — TAKO Mail Phase 1, Today's Focus, contact-company auto-promote
+
+The "30 minutes a day" plumbing. Email integration earned its way past the no-features-until-first-sale gate because every sale gets closed over email; without it the pipeline view lies. Plus the smart task prioritisation that turns the morning open-TAKO into "here are your top 3" rather than "here are 200 things, good luck."
+
+- **TAKO Mail Phase 1** — IMAP-read + SMTP-send, personal accounts + admin-only shared mailboxes, manual log-to-CRM, AI summary on every inbound, sent-folder sync, compose with tiptap + variable templates + localStorage drafts, setup wizard for the four major providers (Gmail / Outlook / iCloud / Custom). Strategy memo locked six decisions: IMAP first (OAuth → Phase 3), manual auto-link (the user decides what's a CRM artefact), metadata + summary only (NEVER bodies — fetched on demand from your IMAP server), sent-folder mirror, admin-controlled shared mailboxes, NO tracking pixels ever. New `backend/mail/` package (NOT `backend/email/` — the latter shadows Python's stdlib). 5 new collections (`email_accounts`, `email_credentials_encrypted`, `emails`, `email_links`, `email_assignments`) with 13 indices. PyNaCl secretbox credential encryption gated by `TAKO_EMAIL_CRED_KEY` (32-byte master key — backend refuses to start without it). Master polling worker at 30s interval, per-account cadence 60s active / 5min sleeper, 200-UID cap on cold-start. Production setup walkthrough at [`docs/email/PRODUCTION_SETUP.md`](docs/email/PRODUCTION_SETUP.md). 60+ backend pytest tests + 6 frontend smoke tests covering every public surface.
+- **TAKO Mail Phase 1.5–1.7 follow-ups** — Bell pings on inbound from a known CRM contact / lead only (newsletters silent; bell-spam guard). Backfill skips AI summary + bell so cold-start doesn't burn the daily AI cap or dump 200 notifications on day-one connection. Server-side delete reconcile every poll cycle (UID compare; soft-deletes locally any row whose UID is gone from the server) so deletes in Apple Mail / Gmail web propagate to TAKO. Live-fetch 410-on-deleted-UID path: if the user clicks a row that was deleted server-side between cycles, the backend recognises "UID not found" specifically, soft-deletes the row, returns 410 Gone with a friendly message — frontend drops it from the list. Refresh button now triggers an actual IMAP poll (not just a DB re-paint) so the gap closes in 1-2s instead of 60s. Hover-row trash icon (Gmail-style quick-delete) AND detail-header Delete button — both open the same DeleteEmailDialog with optional "also remove from real mailbox" checkbox (IMAP `STORE \Deleted` + EXPUNGE). 410 fix on `/api/email/inbox` 500 (the `asyncio.create_task` on the activity-bump was rejecting Motor's Future-like return).
+- **Today's Focus card + daily TaskRanker (Phase B)** — Mon-Fri 06:55 Europe/London cron iterates every user with at least one open task, ranks via Claude under their `priority_mode` (Revenue / Cost / Balanced), writes one row per user to `db.task_rankings`. `/tasks` page renders a "Today's focus" card with the top 3 still-open tasks; rolling client-side promotion as you complete them. Three-mode pill switches mode + instantly re-ranks. Manual Refresh re-ranks on demand (rate-limited 1/min/user). Strict-JSON parse with valid-task-id clamp + rank renumber. Cap-block returns empty rather than crashing. Greyed-out "Include private life" toggle reserved for the future Private Chores project. Spec doc at [`docs/operations/2026-05-03-task-prioritisation-agent-phase-b.md`](docs/operations/2026-05-03-task-prioritisation-agent-phase-b.md).
+- **Auto-promote contact.company → Company entity + link** — Florian flagged: Lennart Cornelsen had `company="Pantaenius"` (legacy free-text string) but the Companies multi-link section read "No companies linked yet". Lead-conversion already auto-created the Company entity via `_resolve_or_create_company_from_lead`; every other contact-create path (direct form, manual edit, CSV import) just stored the legacy string. New `_resolve_or_create_company_for_contact` sibling. Wired into `POST /api/contacts` and `PUT /api/contacts/:id`. One-shot `Backfill contact-company links` workflow runs the same logic retroactively (idempotent, dry-run supported) — fixed every existing affected contact in production.
+- **Emails on the entity activity feed** — `GET /entity/:type/:id/history` learns a new event source from `email_links` joined to `emails`. Sent emails (composed via the entity-page Email button) show as `Sent email · <subject>` (Send icon, indigo) ; logged inbound emails show as `Received email · <subject>` (Mail icon, rose). Click-through to `/inbox?email=<id>` deep-links to the message. New "Mail" filter chip on the timeline distinguishes from the existing "Campaigns" chip (campaign-recipient rows).
+- **Searchable Lead / Contact / Company pickers in Create + Edit Deal** — flat radix Selects became unusable past ~10 entries. New `<SearchableSelect>` component with type-ahead, options carry a subtitle (Lead → company, Contact → job_title, Company → industry), portal + `position: fixed` from the trigger's bbox so the popover escapes ANY ancestor's overflow (the original Edit Deal dialog clipped the popover on the right and labels rendered as "ntaenius" instead of "Pantaenius"). Right-edge collision detection auto-anchors right when near the viewport edge. Min-width 240px. Reusable across the app.
+- **Linked entities section on Deal detail** — read-only mode now surfaces who the deal is with: Lead / Contact / Company rows with icon + clickable name (deep-links via `?detail=<id>`) + metadata cluster (job_title / email / industry / website, truncating as one block). Email button auto-pre-fills To from the linked contact (or lead fallback, or company's primary contact); fully editable in the compose modal. Layout uses `max-w-2xl` + flex `min-w-0` truncation so long deal names + linked-contact lines no longer leak past the dialog edge.
+- **AdminPage — superadmin can edit org licence + AI trial + demo state** — for hosted-by-us / comp / extended-trial accounts. `PUT /admin/organizations/:id` allow-list extends to `ai_trial_ends_at` + `is_demo` + `demo_status` + `demo_expires_at` (with ISO datetime validation). Frontend gets an Edit pencil per org row that opens a sectioned modal (Identity / Licence / AI Trial / Demo state) with inline copy explaining what each control actually drives.
+- **Sidebar Inbox entry + `/inbox?email=<id>` deep-link** — Inbox lives under the Engagement section in the left rail (EN: "Inbox" · DE: "Posteingang") with the Mail icon. Settings → Email Accounts reachable via `/settings/email`. The inbox view honours `?email=<id>` deep-links from the bell-ping notifications and the new HistoryTimeline drill-down.
+- **`User.language` field** — added so the email summariser knows which language to write summaries in for inbound mail received while the user isn't online. Frontend pushes the localStorage `tako_lang` value via `PUT /auth/me` on every language toggle. Shared mailboxes inherit the org owner's language.
+
 ### Mid May 2026 — Tasks v2 closing chapter + design consolidation across the app
 
 The Tasks v2 redesign closed in three phases (2 / 2.1 / 3), then a breadth-first design pass swept the same editorial vocabulary across nine entity-list pages.
@@ -860,8 +884,42 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 
 ## Pending / Roadmap
 
+### TAKO Mail — Phase 2 / 3 / 4
 | Item | Status |
 |------|--------|
+| Multi-folder support (Sent / Junk / Archive / custom) | Phase 1 watches INBOX only; closes the "All Mail vs INBOX" gap vs Apple Mail |
+| All-accounts merged inbox view | Today: switch via left rail. Phase 2: interleave |
+| Bulk delete (multi-select in centre list) | Phase 2 |
+| Trash recovery surface for soft-deleted emails | Soft-delete flag is on every row; needs a `/trash`-style listing + restore |
+| "Load more" / pagination on inbox | Cold-start caps at 200 newest UIDs |
+| `ai_intent` classification on inbound | Schema field reserved; Sentinel slice in Phase 2 |
+| Re-summarise on language change | Existing summaries stay in the language they were generated in |
+| Sentinel skip for known-sender auto-replies | OOO from a known contact still pings the bell today |
+| Bell-ping fan-out to all admins on shared mailboxes | Currently goes to org owner only |
+| Real UserPicker for the Assign-to action on shared mailboxes | `window.prompt` today; UserPicker component exists, just not wired |
+| Mark-done UX for shared-mailbox assignees | i18n key reserved; backend endpoint not shipped |
+| Activity-feed delete semantics split (inbox vs everywhere) | Today: soft-delete hides from both. Phase 2 if needed |
+| Cross-device draft sync | Compose drafts are device-local localStorage today |
+| Reply-all + scheduled send | Phase 2 niceties |
+| Attachment binaries → TAKO Files bridge | Metadata surfaces today; binary download requires opening in your real client |
+| OAuth (Sign in with Google / Microsoft) + push delivery | Phase 3 — Gmail Pub/Sub + Microsoft Graph webhooks replace 30s polling |
+| Atlas localisation pass | Phase 4 — full i18n for the email surface, locale-aware date/time |
+
+### Phase B — Smart task prioritisation follow-ups
+| Item | Status |
+|------|--------|
+| Per-task priority badge + override + reason chip on each row | Phase B.2 |
+| "Start focus session" walkthrough that opens the top 3 one at a time | Phase B.2 |
+| Private Chores integration (toggle currently greyed out) | Schema-side ready; depends on the separate Private Chores project shipping |
+| Prompt tuning loop based on operator-flagged ranking surprises | Ongoing |
+
+### Pre-existing
+| Item | Status |
+|------|--------|
+| Encrypt the BYO Anthropic key in `db.org_integrations` | Plaintext today; should use the same `mail.crypto` helper |
+| Backend tests in CI | 60+ email-module tests + the existing suites run locally only; deploy-backend.yml smoke-tests `/api/health` only |
+| `max_users` per-org seat cap enforcement | Legacy field exists on the model; not enforced |
+| Roll out `<SearchableSelect>` to other long-list dropdowns | Add-to-Campaign, etc. |
 | Chrome extension (`tako-chrome-extension`) | Not started — backend pairing ready |
 | OAuth token encryption at rest | Not done — required before production Meta OAuth |
 | Meta app review (Page Public Content Access) | Not submitted — start early, takes weeks |
