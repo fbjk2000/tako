@@ -624,8 +624,9 @@ These endpoints power the marketing site and are public — auth is the absence 
 |--------|----------|-------------|
 | POST | `/api/newsletter` | Newsletter signup. Body: `{email, source}`. Idempotent on email (duplicates return 200 without re-sending the welcome). Used by the footer form, the `/demo` page's "notify me when sandbox is live" capture, and any future opt-in surface |
 | POST | `/api/partners/agency-application` | Founder Tier / Agency Partner application from the marketing `/partners` page. Body: `{full_name, work_email, company, website, linkedin, three_clients_text, founder_tier_intent}`. Inserts into `partner_applications`, fires the admin notification cascade (in-product → WhatsApp → email-to-every-admin) and sends the applicant an auto-response. Returns `{ok, application_id}` |
-| GET | `/api/booking/{user_id}/info` | Public booking host info (name, avatar, welcome message). Powers the `/book/:userId` route's header |
-| POST | `/api/bookings` | Public booking submission. Sets the row to `pending_confirmation` status with a single-use confirmation token; deferred side-effects (calendar event creation, host notification) only fire on confirm |
+| GET | `/api/booking/{user_id}/info` | Public booking host info (name, avatar, welcome message) plus a `meeting_types` array of active types (`type_id`, `label`, `description`, `duration_minutes`). Powers the `/book/:userId` route's header and type picker |
+| GET | `/api/booking/{user_id}/available` | Available slots for a given date. Requires `type_id` query param (duration derives from the meeting type). May return `at_capacity: true` when that type's daily cap is reached |
+| POST | `/api/booking/{user_id}/book` | Public booking submission. Body requires `type_id`; accepts an `Idempotency-Key` request header so retrying clients can't double-book. Returns 400 `unknown_or_inactive_meeting_type` or 409 `day_at_capacity`. Sets the row to `pending_confirmation` with a single-use token; deferred side-effects fire on confirm |
 | POST | `/api/bookings/confirm` | Confirms a `pending_confirmation` booking via the token from the email. Creates the calendar event + fires the host notification. Returns 410 on expired token, 404 on invalid, 409 on already-cancelled |
 
 ### Admin / refund
@@ -787,6 +788,13 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–May 2026)
+
+### Late May 2026 — Booking v2 Phase 1: named meeting types, caps, idempotency
+
+- **Named meeting types** — booking settings now define a `meeting_types` array replacing the old flat `meeting_durations` list (kept one release for backward-safe migration). Each type carries its own label, duration, buffer, daily cap, minimum notice, booking horizon, video config, and active flag; operators configure them in Settings → Booking.
+- **Per-type daily caps** — each meeting type can independently cap the number of bookings accepted per day; the availability endpoint returns `at_capacity: true` when the cap is reached for a given type on a given date.
+- **Minimum notice & booking horizon** — per-type controls block bookings made within X minutes from now (minimum notice) or beyond Y days out (booking horizon), preventing last-minute surprises and runaway future availability.
+- **Idempotency on book** — `POST /booking/{user_id}/book` now accepts an `Idempotency-Key` request header; a retrying client or agent replaying the same key gets the original booking back instead of creating a duplicate.
 
 ### Late May 2026 — TAKO Mail Phase 1, Today's Focus, contact-company auto-promote
 
