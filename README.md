@@ -791,6 +791,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — LLM/AI-search visibility for the marketing site
+
+tako.software was invisible to AI search: the raw HTML response was an empty CRA shell ("You need to enable JavaScript…"), so GPTBot, ClaudeBot, PerplexityBot and Bingbot (which powers ChatGPT search) indexed nothing.
+
+- **Build-time prerender** — `frontend/scripts/prerender.js` runs as `postbuild`: headless Chrome renders `/` and `/partners` against the fresh build and writes the full HTML into `build/` (`index.html` + `partners.html`), with hard content assertions (headline, four pillars, agents, pricing, compliance claims) so a blank render fails the deploy instead of silently shipping an empty shell. React boots on top of the static DOM unchanged. The alpine Docker image sets `SKIP_PRERENDER=1` (no headless Chrome on musl) — Netlify is the public serving path and prerenders on every deploy.
+- **Owned Business Suite head metadata** — new title/description, canonical, OG/Twitter cards, and JSON-LD (`SoftwareApplication` + `Organization`) in `public/index.html`; `/partners` keeps its own title/meta/canonical in its prerendered file. New `og-cover.png` (1200×630) replaces the stale "pays you back / start free" social banner.
+- **robots.txt + sitemap.xml** — real static files in `frontend/public/`, served ahead of the SPA fallback (previously both returned the app shell).
+
 ### Early June 2026 — custom fields, appointment reminders, operator UX polish
 
 The "make the partner ecosystem actually possible" pass — every org can now extend the CRM schema themselves without touching the core. Plus a chunk of UX polish that closed gaps Florian flagged from daily use: appointment reminders that actually fire, edit dialogs that close on save, calendar pills that go where you expect.
