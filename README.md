@@ -794,6 +794,11 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — Booking approval queue + mobile nav fix
+
+- **Booking approval queue** — guest-verified booking requests now wait for the host instead of auto-confirming. New status `pending_host_approval` (after the existing guest email-confirm step); the Bookings page shows a **"Requests awaiting your confirmation"** queue — opening an item lets the host **confirm with a meeting link + note to the guest** (both emailed, link stored on the booking and included with the .ics receipt) or **reject with a reason** (polite decline email + re-book link; the slot is released). Calendar event / lead / reminder side-effects now fire on host approval. Per-host toggle `require_approval` in Booking Settings (default ON); guards: host-or-org-admin only, no double-approve, rejected/expired slots rebookable. Endpoints: `POST /api/bookings/{id}/approve`, `POST /api/bookings/{id}/reject`.
+- **Mobile landing nav** — Sign in / Get TAKO / language toggle were invisible on phones: the actions cluster rendered *behind* the open hamburger menu (two fixed panels at the same offset, z-index 198 vs 199). The actions now live inside the menu on mobile.
+
 ### Mid June 2026 — CI gates, template library, double opt-in (audit follow-ups closed)
 
 - **CI gates before deploys** — the backend deploy now requires the full unit suite (Python 3.11) to pass; the frontend deploy requires the locale audit. Prod previously received pushes with zero automated checks.
