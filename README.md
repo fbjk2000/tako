@@ -794,6 +794,20 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — UI/UX plan Waves A–D: global search, record pages, bulk edit, saved views, funnel
+
+The approved follow-up to the audit pass (`docs/operations/2026-06-11-ui-ux-enhancement-plan.md`), shipped in one run:
+
+- **Global record search in the TopBar** (`⌘/`) — one persistent field finds leads, contacts, companies and deals as you type via the new `GET /api/quick-search` (regex, org-scoped, no AI). Results deep-link into the new record pages. ⌘K stays task-capture.
+- **Full record pages** — `/leads/:id`, `/contacts/:id`, `/companies/:id`, `/deals/:id`: shareable URLs with browser back/forward, details + custom fields on the left, the unified history timeline as a first-class column on the right. List dialogs remain the quick-peek; each gains a "Full page" button. New `GET /api/deals/{id}` (single-deal read existed only via the list before).
+- **Bulk edit** — "Edit fields" in the bulk bar on Leads/Contacts/Companies drives the existing `/bulk/update` (now field-whitelisted server-side): set status/source/tags/decision-maker/industry across N selected records; untouched fields keep their values.
+- **Dashboard that earns the homepage** — Today's Focus top-3 (same card as /tasks), a **weekly pulse strip** (deal stage moves from the new audit trail, won/lost counts + value, replies awaiting an answer via `GET /api/dashboard/weekly-pulse`) and a **conversion funnel** card (leads → converted → deals → won, with per-source breakdown via `GET /api/dashboard/funnel`).
+- **Saved views** — per-user named filter combinations as a chips row on Leads/Contacts (`GET/POST/DELETE /api/views`); snapshot the current filters, re-apply with one click.
+- **Server-side sort** — `sort`/`order` params (whitelisted per entity) on the core list endpoints + a sort dropdown in the filter bars (newest/oldest/name/recently updated).
+- **Mobile** — entity pages below 640px: full-width search, 50/50 filter chips, wrapping rows, sticky bulk bar.
+- **Polish** — org-level **trash retention setting** (Settings → Data, drives the daily purge job), task priority spelled out next to the colour dot, tasks filter-banner i18n, +84 locale keys (en/de parity maintained at 2,545 keys).
+- **Deploy hardening** — pip network timeout/retries raised in the backend Dockerfile after two consecutive PyPI read-timeouts took the prod build (and briefly the backend) down on 2026-06-11.
+
 ### Mid June 2026 — Data ownership pass: export, import integrity, duplicates, compliance (product audit P0–P2)
 
 A full product audit (2026-06-11, `docs/operations/2026-06-11-tako-product-audit.md`) found the brand promise — *owned* data — wasn't backed by the product: there was no export anywhere, imports silently corrupted semicolon CSVs, core lists silently truncated at 1,000 rows, and the only global search died without an AI key. One overnight pass closed all P0–P2 findings:
