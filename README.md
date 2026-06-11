@@ -794,6 +794,12 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — Checkout fixes: VAT at checkout, installment plans unblocked
+
+- **Pay Once charged €6,000 instead of €5,000** — the checkout endpoint added a flat 20% "VAT" on top of the advertised net price for every buyer (wrong for 19%-VAT Germany, and contradicting the page's "VAT calculated at checkout" promise). Sessions now carry the **net amount** with `tax_behavior=exclusive` + **Stripe automatic tax**, so checkout shows €5,000 + the buyer-country VAT. Falls back to a plain session (with a loud log) if Stripe Tax isn't enabled on the account. Invoices now split VAT from the **actual charged total** persisted off the Stripe session/webhook.
+- **12/24-month plans dead** — they require recurring Stripe Price IDs that were never configured in prod (`STRIPE_PRICE_12MO/24MO`), so checkout 500'd. Missing IDs are now **auto-provisioned** via the Stripe API (Product + recurring monthly Price, cached in platform_settings). Env-configured IDs still take precedence.
+- Checkout requests are bounded at 25s client-side and the Stripe line item now carries the real plan name instead of "TAKO Payment".
+
 ### Mid June 2026 — Booking approval queue + mobile nav fix
 
 - **Booking approval queue** — guest-verified booking requests now wait for the host instead of auto-confirming. New status `pending_host_approval` (after the existing guest email-confirm step); the Bookings page shows a **"Requests awaiting your confirmation"** queue — opening an item lets the host **confirm with a meeting link + note to the guest** (both emailed, link stored on the booking and included with the .ics receipt) or **reject with a reason** (polite decline email + re-book link; the slot is released). Calendar event / lead / reminder side-effects now fire on host approval. Per-host toggle `require_approval` in Booking Settings (default ON); guards: host-or-org-admin only, no double-approve, rejected/expired slots rebookable. Endpoints: `POST /api/bookings/{id}/approve`, `POST /api/bookings/{id}/reject`.
