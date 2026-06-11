@@ -799,6 +799,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 - **Per-client builds** — `--client <name>` applies `clients/<name>/overlay/**` over the stage before the frontend build, so client-specific frontend variants compile into the shipped bundle. Per-client handover records live in `clients/<name>/CLIENT.md`; process docs in `docs/handover/`.
 - **Client downloads page** — `tako.software/downloads` → password-protected page carrying the latest package + sha256 + install guide, published via `scripts/publish-downloads.sh` (full-replace deploy: the page always serves exactly the latest release).
 
+### Mid June 2026 — Booking settings made wipe-proof
+
+A failed settings load + Save could silently **reset the host's entire booking configuration** to defaults (the PUT was a full-model replace, so an empty form wrote slug=None, default hours, default meeting types — this bit Florian after a deploy restart). `PUT /booking/settings` is now a **partial merge** (`exclude_unset`): only fields the client actually sends are written, an empty body is an explicit no-op, and `booking_slug: null` still clears the slug when sent deliberately. The settings dialog additionally refuses to save a never-loaded form, shows a Saving… state, and no longer has silent no-feedback paths (expired session now toasts instead of doing nothing).
+
 ### Mid June 2026 — Checkout fixes: VAT at checkout, installment plans unblocked
 
 - **Pay Once charged €6,000 instead of €5,000** — the checkout endpoint added a flat 20% "VAT" on top of the advertised net price for every buyer (wrong for 19%-VAT Germany, and contradicting the page's "VAT calculated at checkout" promise). Sessions now carry the **net amount** with `tax_behavior=exclusive` + **Stripe automatic tax**, so checkout shows €5,000 + the buyer-country VAT. Falls back to a plain session (with a loud log) if Stripe Tax isn't enabled on the account. Invoices now split VAT from the **actual charged total** persisted off the Stripe session/webhook.
