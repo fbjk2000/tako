@@ -245,25 +245,24 @@ TAKO is distributed to customers as a stripped source tarball — they run the s
 
 ### Build script
 
-`scripts/build-distribution.sh` produces `dist/tako-crm-<version>.tar.gz` plus an accompanying `.sha256` and `VERSION` file. What it ships:
+`scripts/build-distribution.sh [version] [--client <name>]` produces `dist/tako-crm-<version>[-<client>].tar.gz` plus an accompanying `.sha256`, `VERSION`, and `dist/manifest.json`. What it ships:
 
-- Full backend and frontend source, minus stripped regions
-- `docker-compose.yml` and Dockerfiles
-- Customer-facing `backend/.env.example` (no platform keys, no Stripe price IDs, no `DISTRIBUTION_DIR`)
-- `scripts/backup-mongo.sh`
-- `scripts/distribution-README.md` (install guide)
-- `docs/VPS-HARDENING.md`
+- Full backend and frontend source (minus stripped regions) + a pre-built frontend bundle
+- `docker-compose.production.yml` (Caddy TLS + Mongo + backend + frontend), dev `docker-compose.yml`, `Caddyfile.example`
+- Customer-facing env templates for backend (incl. Resend webhook secrets; no platform keys, no Stripe price IDs) and frontend
+- `LICENSE.md` stamped with the client name on `--client` builds
+- `scripts/backup-mongo.sh` + data migrations; install guide as the package `README.md`
+- `docs/VPS-HARDENING.md`, `docs/BCC-OUTBOUND-CAPTURE.md` (whitelist — everything else in `docs/` stays internal)
 
 What it strips:
 
-- **UNYT / crypto payment UI and routes** — customers see Stripe only
-- **Self-serve demo** — `/demo` endpoints, demo seeder, middleware soft-lock, admin demo management
-- **Platform-only pages** — `/changelog`, `/download`, partner onboarding admin UI
-- **Super-admin surfaces** — analytics, data explorer, release notify endpoint, partner payout admin
-- **Distribution tooling itself** — `scripts/build-distribution.sh`, release workflow, `DISTRIBUTION_DIR` handling
-- **Internal configs** — `.emergent/`, platform-only migrations, internal test fixtures
+- **Platform-only pages** (landing, pricing, demo, partners, download, changelog, subscription-success) — overwritten with redirect stubs so routes survive without the content
+- **UNYT / crypto payment routes and residue** — customers see Stripe only
+- **Self-serve demo system**, founder-email super-admin checks, internal docs/CI/tests/configs
 
-Stripping is driven by sentinel-wrapped regions using the generalized markers `DEMO_BEGIN`/`DEMO_END` and `PLATFORM_BEGIN`/`PLATFORM_END` (matched as `(?P<kind>DEMO|PLATFORM)_BEGIN` … `(?P=kind)_END`). Touch them carefully — the regex is paired.
+Inline platform-only code is stripped via sentinel markers `DEMO_BEGIN`/`DEMO_END` and `PLATFORM_BEGIN`/`PLATFORM_END` (matched as `(?P<kind>DEMO|PLATFORM)_BEGIN` … `(?P=kind)_END`) — the pairs must stay matched. A verification gate (brand-residue grep + required/forbidden file checks) fails the build rather than emit a dirty package. New platform-only pages must be added to `PLATFORM_STUB_PAGES` in the script.
+
+Per-client frontend variants: put whole-file overrides under `clients/<name>/overlay/**` (see `clients/README.md`) and build with `--client <name>`. Publishing to the client downloads page (`tako.software/downloads`): `scripts/publish-downloads.sh`. Process docs: `docs/handover/RELEASE-PROCESS.md`.
 
 ### Release workflow
 
@@ -793,6 +792,12 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### Mid June 2026 — Self-host distribution refit + client downloads page
+
+- **Distribution builder brought current** — `scripts/build-distribution.sh` had drifted since April: internal `docs/` and `.github/` were shipping to customers, the route-strip regexes had rotted, and the prerender postbuild broke the stage build. Platform pages are now replaced with redirect **stubs** (no route surgery), internal paths are excluded with a small docs whitelist, and a **hard verification gate** (brand-residue grep, required/forbidden files) refuses to emit a dirty package. Packages now include `Caddyfile.example`, a per-client-stamped `LICENSE.md`, and corrected env templates (incl. both Resend webhook secrets).
+- **Per-client builds** — `--client <name>` applies `clients/<name>/overlay/**` over the stage before the frontend build, so client-specific frontend variants compile into the shipped bundle. Per-client handover records live in `clients/<name>/CLIENT.md`; process docs in `docs/handover/`.
+- **Client downloads page** — `tako.software/downloads` → password-protected page carrying the latest package + sha256 + install guide, published via `scripts/publish-downloads.sh` (full-replace deploy: the page always serves exactly the latest release).
 
 ### Mid June 2026 — Checkout fixes: VAT at checkout, installment plans unblocked
 
