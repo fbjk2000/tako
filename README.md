@@ -794,6 +794,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — CI gates, template library, double opt-in (audit follow-ups closed)
+
+- **CI gates before deploys** — the backend deploy now requires the full unit suite (Python 3.11) to pass; the frontend deploy requires the locale audit. Prod previously received pushes with zero automated checks.
+- **diag-email-poller fixed** — the inline mongosh scripts made the workflow YAML unparseable, registering a failed run on every push; logic moved to `scripts/diag-email-poller.sh`, the workflow is a thin SSH runner again.
+- **Email template library** — save campaign subject+body as an org-shared named template (`GET/POST/PUT/DELETE /api/email-templates`, cap 50); "Start from template" picker + "Save as template" in the campaign create dialog. Merge tags render at send time as usual.
+- **Double opt-in (UWG §7)** — org toggle in Settings → Email (default off). "Request consent" on leads (single + bulk) sends a confirmation email with an HMAC-signed link; `GET /api/public/confirm-consent` stamps `consent_status=confirmed` + timestamp as proof. With the toggle on, campaign sends **skip unconfirmed leads** (rows stay `pending`, count reported as `skipped_no_consent`); contacts are not gated. Consent badges on lead dialogs + record pages.
+- **Laptop-width layout fix** — PageHeader wraps instead of crushing the title; row hover actions float as an overlay instead of reserving ~250px per row (was breaking Leads/Contacts/Companies at ~1100px windows).
+
 ### Mid June 2026 — UI/UX plan Waves A–D: global search, record pages, bulk edit, saved views, funnel
 
 The approved follow-up to the audit pass (`docs/operations/2026-06-11-ui-ux-enhancement-plan.md`), shipped in one run:
