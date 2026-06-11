@@ -446,7 +446,10 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/leads` | List leads. Params: `status`, `source`, `tags` (csv, ANY-match), `q` (search across name/email/company/title), `assigned_to`, `has_email`, `campaign_id`, `not_in_campaign_id` |
+| GET | `/api/leads` | List leads. Params: `status`, `source`, `tags` (csv, ANY-match), `q` (search across name/email/company/title), `assigned_to`, `has_email`, `campaign_id`, `not_in_campaign_id`, `limit`, `offset`. Returns `X-Total-Count` header |
+| GET | `/api/export/{entity}` | CSV export for `leads` / `contacts` / `companies` / `deals` / `tasks` — same filter params as the list endpoints, streams all rows, UTF-8 BOM |
+| GET | `/api/duplicates/{entity}` | Duplicate groups (email + normalized-name) for `leads` / `contacts` / `companies` |
+| POST | `/api/duplicates/{entity}/merge` | Merge `duplicate_ids[]` into `survivor_id` — fills empty fields, unions tags, relinks references, losers go to Trash |
 | POST | `/api/leads` | Create lead |
 | GET | `/api/leads/{lead_id}` | Get single lead |
 | PUT | `/api/leads/{lead_id}` | Update lead |
@@ -790,6 +793,21 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### Mid June 2026 — Data ownership pass: export, import integrity, duplicates, compliance (product audit P0–P2)
+
+A full product audit (2026-06-11, `docs/operations/2026-06-11-tako-product-audit.md`) found the brand promise — *owned* data — wasn't backed by the product: there was no export anywhere, imports silently corrupted semicolon CSVs, core lists silently truncated at 1,000 rows, and the only global search died without an AI key. One overnight pass closed all P0–P2 findings:
+
+- **CSV export everywhere** — `GET /api/export/{leads|contacts|companies|deals|tasks}` (org-scoped, honours active list filters, streams with no row cap, UTF-8 BOM so German Excel opens umlauts cleanly) + Export CSV buttons on every entity page and a new **Settings → Data** tab with per-entity exports and the GDPR Art. 20 **full-workspace JSON export** (existed since the GDPR work, now finally has a UI).
+- **Import integrity** — all three import-csv endpoints parse via the new `backend/data_io.py`: utf-8-sig everywhere, **delimiter sniffing** (semicolon German-Excel files used to import as one blank record while reporting success), empty/invalid rows skipped with per-row reasons, duplicate emails/names reported instead of silently re-inserted. Import dialogs show the full report + a downloadable CSV template.
+- **Pagination** — `/leads /contacts /companies /deals /tasks` accept `limit`/`offset` and return `X-Total-Count`; list pages show "Showing X of Y · Load more". `/v1` list endpoints get `offset` + `total` so integrations can page a full dataset (previously hard-capped per call).
+- **Duplicate search + merge** — `GET /api/duplicates/{entity}` groups by email / normalized name; `POST /api/duplicates/{entity}/merge` fills the survivor's empty fields, unions tags, **relinks references** (deals, tasks + link arrays, campaign_recipients, inbound_messages, contact_company_links, company FKs) and soft-deletes the losers into Trash. "Duplicates" button on Leads/Contacts/Companies opens the finder dialog (pick survivor → merge, or delete singles). Add-Lead warns live on duplicate emails.
+- **Smart Search works without AI** — the AI intent/summary calls are individually guarded; keyword + graph search now run on a plain regex fallback when no Anthropic key is configured (was: "0 results" for data that exists).
+- **Deal outcomes + audit trail** — `won_date`/`lost_date`/`lost_reason` stamped on stage change with a **lost-reason prompt** in the UI; field-level audit events (stage, value, probability, close date, owner) recorded and rendered in the entity history timeline.
+- **Email compliance** — RFC 8058 `List-Unsubscribe` + one-click POST endpoint (HMAC-signed), visible unsubscribe link, and an org-level **imprint footer** (Settings → Email) appended to every campaign send.
+- **Trash auto-purge** — daily job hard-deletes soft-deleted rows past `organizations.trash_retention_days` (default 90; 0 disables) — closes the GDPR storage-limitation gap.
+- **UX/i18n batch** — error cards with Retry instead of infinite skeletons, unsaved-changes guards on edit dialogs, bulk-delete confirmation dialogs, onboarding checklist derives state from real data, +185 locale keys (full en/de parity, `frontend/scripts/check-locales.js` guards it in CI), login-page copy fixes, undated demo-page promise.
+- **Dev env** — `UPLOAD_DIR` env-configurable (backend runs outside Docker again), `DISABLE_VISUAL_EDITS=1` escape hatch for `craco start` on newer Node, backend requires Python 3.11 (pins don't resolve on 3.13+).
 
 ### Mid June 2026 — LLM/AI-search visibility for the marketing site
 
