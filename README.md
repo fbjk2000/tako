@@ -793,6 +793,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — One design language, everywhere + a luxury marketing pass
+
+A nine-agent audit swept every app surface against the TAKO design tokens (201 deviations found): cool-gray slate utilities replaced with the warm ink/graphite/stone/paper palette across ~25 pages, AA-compliant muted text everywhere real text was rendered in decorative smoke, font literals collapsed onto the token trio (Fraunces/Inter/JetBrains Mono), off-palette blues/cyans retired to indigo/teal semantics, destructive reds unified on coral, and the ⌘K palette CSS made global (it was completely unstyled outside /tasks). The marketing site got a luxury typographic pass — larger, lighter display headlines, a drawn starting-line gesture, grain, an enormous 蛸 watermark behind the ownership manifesto, indigo CTAs with a single coral conversion moment.
+
 ### Mid June 2026 — Projects revamped into a real PM surface
 
 The project detail dialog is gone; every project now opens a full **workspace page** at `/projects/:id` (deep-linkable, back-button friendly — same pattern as the lead/contact/company/deal record pages). Following the conventions of Linear/Asana-class tools: **click-to-edit name and description with autosave** and a visible "Saved ✓" flash (the old dialog had no editing and no save feedback), **inline team management** (add/remove members — previously the team was rendered read-only with no way to change it; the roster now also syncs to the project's chat channel), a **drag-and-drop task board** (To Do / In Progress / Done with per-column quick-add) plus a grouped list view, **target date** on projects, and a task detail dialog that **stays open on save** with assignee + due date now editable. Backend: `PUT /projects/{id}` is whitelisted to client-editable fields (was: blind `$set` of any payload), members are validated against the org, and `project_core.py` carries the unit-tested update sanitizer.
