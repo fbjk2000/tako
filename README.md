@@ -1008,7 +1008,7 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 
 ### Apr 2026 — Pre-launch QA highlights
 
-- **Self-hosted licence model** — one-time, 12-month, and 24-month installment plans via Stripe; UNYT token payments on Arbitrum; optional €999/year maintenance renewal. All licences unlock unlimited users and unlimited AI.
+- **Self-hosted licence model** — one-time, 12-month, and 24-month installment plans via Stripe; UNYT token payments on Arbitrum; optional €999/year maintenance renewal. All licences unlock unlimited users; AI features carry no TAKO surcharge — self-hosted instances connect the customer's own Anthropic API key (usage billed by Anthropic at their rates).
 - **Public booking page** — now renders host name, avatar, and welcome message from `GET /booking/{user_id}/info`.
 - **Profile editing** — `PUT /auth/me` lets users update name, avatar, and timezone from Settings → Profile. IANA timezone picker uses `Intl.supportedValuesOf('timeZone')` with a fallback list and a "use my current timezone" one-click.
 - **Password change** — `POST /auth/change-password` with bcrypt verification, 8-char minimum, plus a richer UI: strength meter, show/hide toggles, inline validation for mismatch / too-short / same-as-current, and post-save confirmation.
