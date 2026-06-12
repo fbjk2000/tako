@@ -793,6 +793,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — Chat becomes tasks + the Lens links itself
+
+**Chat → Tasks (Phase D, project channels first).** A daily agent (weekdays 07:20 London, plus an on-demand scan button on every project workspace) reads each active project's chat since its watermark and turns clear commitments ("Kate, can you book the demo for Monday?") into pending task suggestions — same accept/dismiss strip as the Sentinel email suggestions, with `source="chat"` provenance, the source quote as the why-now line, assignee resolution against the project team, and hash-based dedupe so re-scans never duplicate. Accepted suggestions land on the project board; unaccepted ones are excluded from boards, health scores and digests. **Lens link suggestions.** When the Context Lens opens an unlinked task, it now offers one-click "Link to:" chips fuzzy-matched from the task text (deterministic, no AI cost) — the last unlinked-task gap after the task-dialog suggestions.
+
 ### Mid June 2026 — One design language, everywhere + a luxury marketing pass
 
 A nine-agent audit swept every app surface against the TAKO design tokens (201 deviations found): cool-gray slate utilities replaced with the warm ink/graphite/stone/paper palette across ~25 pages, AA-compliant muted text everywhere real text was rendered in decorative smoke, font literals collapsed onto the token trio (Fraunces/Inter/JetBrains Mono), off-palette blues/cyans retired to indigo/teal semantics, destructive reds unified on coral, and the ⌘K palette CSS made global (it was completely unstyled outside /tasks). The marketing site got a luxury typographic pass — larger, lighter display headlines, a drawn starting-line gesture, grain, an enormous 蛸 watermark behind the ownership manifesto, indigo CTAs with a single coral conversion moment.
