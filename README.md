@@ -793,6 +793,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — People picker gets its styles
+
+The shared `UserPicker` (the people picker behind the project Add-member popover, the task owner/assignee fields, and the collaborator chips) had always emitted `tako-user-picker-*` / `tako-assignee-*` / `tako-collab-*` classnames that were never given any CSS — so every instance rendered as raw HTML, with avatar initials fused into names and the selected check mark stranded below the row. `App.css` now styles the whole family on-palette: a warm paper popover surface, teal-tinted circular avatars, name + email stacked in a truncating meta column, a teal check and tint on selected rows, and proper pill treatment for the assignee chip (including the dashed "unassigned" state) and collaborator chips. Pure CSS against tokens already on `main`.
+
 ### Mid June 2026 — Buy without an account + Pricing v2
 
 Checkout no longer requires a TAKO account: **guest checkout** creates the Stripe session directly (email, billing and VAT ID collected by Stripe), fulfilment is **email-keyed** — a `licenses` record plus a signed 72-hour download link in the welcome email, a public `/download-link` page for fresh links, and automatic license attachment if the buyer ever creates an account with that email. Terms acceptance is now enforced at checkout (recorded consent + Stripe consent collection): instalment plans are contractually **deferred payment of the full price** — cancelling the payment plan now suspends the license (previously it stayed active) — and the 30-day money-back guarantee requires a signed **deletion certification**, submitted via the new `/refund` page and processed through an admin refund queue (Stripe refund + license revocation + referral commission claw-back). `/pricing` was rebuilt on the dark-cinematic design system with full EN/DE parity, and the Terms gained instalment/guarantee/UNYT-finality clauses (UK-law drafted, pending legal review).
