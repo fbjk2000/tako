@@ -793,6 +793,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid June 2026 — Admin lists get multi-select + reachable row actions
+
+The Super-Admin **Users** and **Organizations** tables (`/admin`) were hard to operate: the right-hand **Actions** column scrolled off the edge of the wide table, so Edit / Reset-PW / Delete were difficult to reach, and there was no way to act on more than one row at a time. Both lists now have a leading **checkbox column** with a tri-state "select all" header, and a **bulk action bar** that appears on selection — **Delete selected** for both, plus a **Set role** dropdown for Users — so destructive controls are surfaced up-front instead of behind a horizontal scroll. The Actions column is now **pinned to the right** (sticky) so per-row controls stay visible regardless of table width, and the row buttons were tightened (Reset-PW is now an icon). Bulk delete fans out over the existing per-row endpoints (`Promise.allSettled`, single summary toast), so there is no backend change; the protected owner account (`florian@unyted.world`) stays unselectable for deletion. EN/DE strings added.
+
 ### Mid June 2026 — People picker gets its styles
 
 The shared `UserPicker` (the people picker behind the project Add-member popover, the task owner/assignee fields, and the collaborator chips) had always emitted `tako-user-picker-*` / `tako-assignee-*` / `tako-collab-*` classnames that were never given any CSS — so every instance rendered as raw HTML, with avatar initials fused into names and the selected check mark stranded below the row. `App.css` now styles the whole family on-palette: a warm paper popover surface, teal-tinted circular avatars, name + email stacked in a truncating meta column, a teal check and tint on selected rows, and proper pill treatment for the assignee chip (including the dashed "unassigned" state) and collaborator chips. Pure CSS against tokens already on `main`.
