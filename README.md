@@ -55,6 +55,9 @@
 - **Company Suggest + Enrich** — Typeahead while creating a company merges hits from your own data (existing companies + names referenced on leads/contacts) with Claude-powered "what is this company" lookups. Operator-confirmation required (AI suggestions tagged "Verify"). Existing company records get a one-click **AI Enrich** that fills empty fields without overwriting operator-set ones; bulk variant up to 20 at a time.
 - **Email Drafting** — Personalised sales emails with tone/purpose selection, embedded in the campaign editor with live HTML preview
 - **Reply Triage** — Inbound replies are auto-classified by Claude (intent + summary), get a drafted contextual response, and propose 0–3 follow-up tasks. Visible inline in the campaign detail expand row with one-click Send / Create Task.
+- **Inbound Email Autopilot** — Every fresh inbound email is auto-attributed (sender matched to contacts/leads, contact links created), intent-classified (interested / question / meeting request / objection / support / invoice / unsubscribe / newsletter / spam), and — when a reply is warranted — arrives with an AI-drafted response in the sender's language built from thread + CRM context (booking link included for meeting requests). Concrete follow-ups land as pending task suggestions. Runs as a budgeted queue worker so AI never slows mail sync; org toggle under Settings → Email compliance.
+- **AI Agents (agent core)** — In-platform Claude agents with real tool use (search CRM, read records, pipeline summary, the asker's tasks, file task suggestions — writes are always human-approved suggestions). Mention **@tako** in Team Chat for grounded answers; **Berny**, the chief-of-staff agent, runs on the same framework. Personas/models/toggles live per-org in Settings → AI Agents; every run is traced (tool calls, tokens, cost) and spend is feature-attributed against the daily cap.
+- **Call Intelligence** — Voicemail and call transcripts are summarised (summary + sentiment) onto the call log, with follow-up suggestions filed for approval.
 - **Lead Summary** — Comprehensive AI profile analysis
 - **Smart Search** — Natural language search across all CRM data
 - **Call Analysis** — AI feedback on recorded calls (score, strengths, improvements, next steps)
@@ -80,7 +83,7 @@
 ### Communication
 - **Inbox (TAKO Mail Phase 1)** — Native email integration via IMAP / SMTP. Three-pane view at `/inbox`: account switcher · chronological list · selected message. **Setup wizard** at `/settings/email/add` with provider-specific guides for Gmail · Outlook / Microsoft 365 · iCloud · Custom (Fastmail / Migadu / your own server). **Edit account settings** via pencil icon on each row at `/settings/email` (also reachable as a dedicated **Email** tab on `/settings`): change display name, IMAP/SMTP host + port + SSL/TLS, signature HTML, or rotate the password. Server re-runs the IMAP + SMTP probe whenever connection-shaping fields change so a bad save can't break the poller; password rotation re-encrypts under the same `credentials_id` so the FK on account + email_links rows survives. **App-password flow**, no OAuth in Phase 1 (Phase 3 lands `Sign in with Google` + Microsoft Graph push). **Personal accounts + admin-only shared mailboxes** with the assignment / "Create task from email" surface for distributing inbound. **AI summary** on every inbound message (1-2 sentences via Haiku, in the recipient's TAKO language; cap-block returns empty rather than crashing the cycle). **Manual "Log to CRM"** action — explicit user choice (strategy memo decision: no auto-attach), multi-select picker over contacts / deals / companies. **Compose** with tiptap rich-text (bold / italic / link / bullet / numbered), variable-template-aware (`{{first_name}}` / `{{company}}` etc. — same vocabulary the campaign sender uses), localStorage draft persistence keyed by composeId so accidentally closing doesn't lose work. **Sent-folder sync** via IMAP APPEND so messages composed in TAKO appear in your real Sent folder threaded correctly. **Strategy memo decisions locked**: metadata + AI summary stored, NEVER full bodies (fetched on demand from your IMAP server when opened); no relays (your SMTP, your deliverability); no tracking pixels, ever. **30s polling** on `/inbox` while on the page; **60s active-cadence / 5min sleeper** APScheduler poll cycle in the background. **Server-side delete reconcile** — UID-compare every cycle so deletes in Apple Mail / Gmail web propagate to TAKO; **Refresh button triggers an on-demand poll** (not just a re-paint) so the gap closes within seconds rather than 60s. **Bell pings** on inbound from a known CRM contact / lead (newsletters / unknown senders silent — no bell-spam). **Backfill skips AI summary + bell** so cold-start doesn't burn the AI cap or dump 200 notifications on day-one connection. **Hover-row trash + detail-header Delete** with optional "also remove from real mailbox" checkbox (IMAP `STORE \Deleted` + EXPUNGE). **Compose pre-fills To** from the linked contact (preferred) → linked lead → primary contact at the company, with full overwrite. Master credential key (`TAKO_EMAIL_CRED_KEY`, libsodium secretbox) is non-negotiable: backend refuses to start without it. Production setup walkthrough at [`docs/email/PRODUCTION_SETUP.md`](docs/email/PRODUCTION_SETUP.md).
 - **Call Scheduling** — Calendar-based scheduling with configurable reminders
-- **Telephony (planned)** — Twilio outbound/inbound calling, consent-gated recording, transcription → tasks (Automation-Max Phase 4; not yet implemented)
+- **Telephony (live)** — Inbound calls to the org number: configurable greeting (EN/DE TTS) → forward to a team phone (recording notice announced before connecting when call recording is enabled — two-party consent) → voicemail fallback. Missed calls and voicemails create high-priority callback tasks matched to the caller's lead/contact with the recording attached; transcripts flow through an AI analyzer into call summaries + suggested follow-ups. All Twilio webhooks signature-validated. Configure under Settings → Telephony; outbound click-to-call from lead records.
 - **Google Calendar** — OAuth integration, two-way sync, events displayed in calendar view
 - **Team Chat** — Real-time messaging with five channel kinds:
   - **DMs** — strict 1:1, only the two participants can read (admins blind in the UI; audit log still records when `CHAT_AUDIT_ENABLED`)
@@ -228,7 +231,7 @@ The four `STRIPE_PRICE_*` ids are also surfaced in `backend/.env.example` — if
 | AI | Anthropic Claude (`claude-sonnet-4-20250514`) via `anthropic` Python SDK |
 | Email | Resend (primary, configurable `SENDER_EMAIL` — founder-led `florian@tako.software` is the production default; `REPLY_TO_EMAIL` routes replies to a shared mailbox), Kit.com (optional subscriber lists). Per-message pacing via `RESEND_SEND_DELAY_S` (default 250ms ≈ 4 sends/sec) keeps batches under Resend's request-per-second cap. |
 | Payments | Stripe + UNYT Token (Arbitrum) |
-| Calling | Twilio Voice API (planned — Automation-Max Phase 4) |
+| Calling | Twilio Voice API (inbound forward/voicemail/recording + outbound click-to-call) |
 | File parsing | pypdf (PDF, 30 pages), python-docx (DOCX) |
 | Job scheduler | APScheduler 3.x with MongoDB jobstore (demo expiry, listener polling, digests, rescoring, **daily campaign-runner**) |
 | Error monitoring | Sentry (backend + frontend, both soft dependencies) |
@@ -439,6 +442,18 @@ python scripts/migrate_campaigns_add_channel.py
 > **Base URL**: `https://yourdomain.com/api`
 
 All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise noted.
+
+### Automation & Agents (Automation-Max, July 2026)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard/my-day` | Personal morning payload: focus tasks, emails awaiting reply, today's meetings, my pipeline, badges |
+| GET | `/api/dashboard/command` | Admin-only management aggregates: pipeline by owner, 7d activity, agent spend, team load, 14d series |
+| GET/PUT | `/api/agents/configs[/{agent_key}]` | Admin: list/edit per-org agent configs (enabled, persona, model). Blank persona resets to default |
+| GET/PUT | `/api/settings/telephony` | Admin: forward number, recording (consent-announced), voicemail, language, greeting |
+| PATCH | `/api/email/{email_id}/autopilot/dismiss` | Hide an autopilot reply draft (classification chips stay) |
+| GET | `/api/email/inbox?needs_reply=1` | Inbox filtered to autopilot-flagged inbound awaiting a reply |
+| POST | `/api/webhooks/twilio/…` | Twilio voice webhooks (inbound, dial-action, call-status, recording-status, transcription, record-done). Unauthenticated but X-Twilio-Signature-validated |
 
 ### Leads
 
@@ -897,6 +912,7 @@ The approved follow-up to the audit pass (`docs/operations/2026-06-11-ui-ux-enha
 - **Global record search in the TopBar** (`⌘/`) — one persistent field finds leads, contacts, companies and deals as you type via the new `GET /api/quick-search` (regex, org-scoped, no AI). Results deep-link into the new record pages. ⌘K stays task-capture.
 - **Full record pages** — `/leads/:id`, `/contacts/:id`, `/companies/:id`, `/deals/:id`: shareable URLs with browser back/forward, details + custom fields on the left, the unified history timeline as a first-class column on the right. List dialogs remain the quick-peek; each gains a "Full page" button. New `GET /api/deals/{id}` (single-deal read existed only via the list before).
 - **Bulk edit** — "Edit fields" in the bulk bar on Leads/Contacts/Companies drives the existing `/bulk/update` (now field-whitelisted server-side): set status/source/tags/decision-maker/industry across N selected records; untouched fields keep their values.
+- **Dashboards v2 — My Day + Command** — Every seat gets **My Day**: emails awaiting your reply (with autopilot draft badges, deep-linking into the inbox), today's bookings + calls, your open pipeline, overdue/AI-suggestion badges. Admins/owners additionally get **Command**: a 14-day leads-vs-won momentum chart, pipeline value by owner, 7-day per-member activity, an AI-agent digest (runs + spend per feature), and team load (`GET /api/dashboard/my-day`, `GET /api/dashboard/command`).
 - **Dashboard that earns the homepage** — Today's Focus top-3 (same card as /tasks), a **weekly pulse strip** (deal stage moves from the new audit trail, won/lost counts + value, replies awaiting an answer via `GET /api/dashboard/weekly-pulse`) and a **conversion funnel** card (leads → converted → deals → won, with per-source breakdown via `GET /api/dashboard/funnel`).
 - **Saved views** — per-user named filter combinations as a chips row on Leads/Contacts (`GET/POST/DELETE /api/views`); snapshot the current filters, re-apply with one click.
 - **Server-side sort** — `sort`/`order` params (whitelisted per entity) on the core list endpoints + a sort dropdown in the filter bars (newest/oldest/name/recently updated).
