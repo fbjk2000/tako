@@ -793,6 +793,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Early July 2026 — Tags v2: one tag experience across the whole CRM
+
+Tags now behave the same everywhere. **Deals** switched from the legacy type-and-add tag box to the shared chip-based picker (with autocomplete against the org's existing deal tags) in both the create *and* edit dialogs — and tags on existing deals are finally editable at all (they were create-only). The **Leads and Contacts tag filter is multi-select**: pick several tags (any-of matching), the trigger shows a count, and the active status/source/tag filters round-trip through the URL so a filtered view can be bookmarked or shared. **Bulk edit** gains tag apply modes — *Add to existing* (default), *Remove these*, or *Replace all* — so retagging fifty records no longer wipes what was already there; replacing with an emptied list explicitly clears all tags. The picker itself got a deep polish pass: Escape closes only the suggestion menu (not the whole edit dialog), full screen-reader combobox wiring, pasting a comma-separated list adds every tag, arrow keys select chips for keyboard removal, and the menu flips above the field near the bottom of the screen. EN/DE parity throughout.
+
 ### Late June 2026 — Tag picker for Leads & Contacts
 
 Tagging is no longer a raw comma-separated text box. Lead and Contact **edit *and* create** forms now use a proper chip-based tag picker (`TagInput`): existing org tags surface in a dropdown as you focus/type so you can pick from what already exists, a "Create …" row adds a brand-new tag inline, chips remove with a click (or Backspace), and duplicates are rejected case-insensitively. New tags created on save immediately repopulate the picker and the tag filter. The Contacts tag **filter** was also upgraded from a plain dropdown to the same searchable popover the Leads page already had. EN/DE parity throughout.
