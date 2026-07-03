@@ -461,6 +461,9 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 | POST | `/api/research/prospects/{id}/dismiss` | Dismiss a prospect (never re-suggested) |
 | POST | `/api/research/dossier/{entity_type}/{entity_id}` | Queue a dossier compile (company/lead/deal; dedups to in-flight one) |
 | GET | `/api/research/dossiers/{entity_type}/{entity_id}` | Dossier history for a record, newest first |
+| GET | `/api/approvals[?kind=&count_only=1]` | Unified pending-approvals feed: task suggestions (mine), autopilot drafts (inbox-visible), prospects (org). Read-only; actions stay on the per-type endpoints |
+| GET/POST/DELETE | `/api/webhooks[/{id}]` | Outbound webhooks. Create returns the signing `secret` ONCE; deliveries signed `X-Tako-Signature: sha256=<HMAC-SHA256 of body>`; https-only, private/loopback hosts rejected; retried once; last 50 deliveries logged per hook |
+| POST | `/api/webhooks/{id}/test` | Fire a signed `webhook.test` event at one hook, result inline |
 
 ### Leads
 
@@ -813,6 +816,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### Early July 2026 — Approvals, daily digest, Maestro, real outbound webhooks (Automation-Max 3b)
+
+Everything TAKO's agents stage for a human now lives on one **Approvals page** (`/approvals`, System nav with a live count badge + a My Day tile): pending task suggestions, autopilot reply drafts (open straight in the Inbox composer — sending stays a human act), and research prospects — accept/dismiss inline, scoped exactly to what you're allowed to see. A weekday **17:30 digest** closes the loop on "silence means progress": each user gets a bell notification + a TAKO chat DM with what the agents did for them today (drafts prepared, suggestions filed, calls analyzed, tasks completed) and their top pending approvals; owners/admins get an org digest (AI spend by feature, agent runs, suggestion accept/dismiss, autopilot volume, research output, erroring jobs). Nothing to say → no digest. **Maestro** joins as a second chat agent on the shared framework (coordination/triage chief-of-operations — routes asks, tracks deadlines/blockers, labels AUTO/CONSULT/REQUIRE, files suggestions only), toggleable per org in Settings → AI Agents. And **outbound webhooks became a real product feature**: they now fire from the actual product flows (lead/contact/deal/task created, deal stage changes, inbound email linked, call completed, candidate hired — previously only the /v1 API emitted anything), signed with a per-hook secret (`X-Tako-Signature`, HMAC-SHA256, shown once at create), SSRF-hardened, retried once, and logged (last 50 deliveries per hook) — managed from a rebuilt Settings → Webhooks card with a one-click signed test event. EN/DE parity throughout.
 
 ### Early July 2026 — Research Autopilot: enrichment you can trust, prospects that find you
 
