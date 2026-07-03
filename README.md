@@ -51,7 +51,8 @@
 
 ### AI Features (Claude)
 - **Lead Scoring** — AI assigns a 1–100 quality score based on profile completeness and signals
-- **Lead Enrichment** — Fills in company info, tech stack, interests, recommended sales approach
+- **Lead Enrichment (web-grounded)** — Researches the lead's company via Anthropic web search and fills company info, tech stack, interests, recommended sales approach — with citations, per-field confidence, and Verified/Unverified marking. Falls back (clearly marked unverified) when web search is unavailable
+- **Research Autopilot** — ICP profiles (Settings → Research) drive a weekly web-research discovery agent that stages deduped prospect suggestions for one-click conversion to leads; on-demand company/lead/deal dossiers (news, key people, talking points — cited); meeting-prep briefs auto-compiled before calendar meetings with CRM-matched attendees
 - **Company Suggest + Enrich** — Typeahead while creating a company merges hits from your own data (existing companies + names referenced on leads/contacts) with Claude-powered "what is this company" lookups. Operator-confirmation required (AI suggestions tagged "Verify"). Existing company records get a one-click **AI Enrich** that fills empty fields without overwriting operator-set ones; bulk variant up to 20 at a time.
 - **Email Drafting** — Personalised sales emails with tone/purpose selection, embedded in the campaign editor with live HTML preview
 - **Reply Triage** — Inbound replies are auto-classified by Claude (intent + summary), get a drafted contextual response, and propose 0–3 follow-up tasks. Visible inline in the campaign detail expand row with one-click Send / Create Task.
@@ -454,6 +455,12 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 | PATCH | `/api/email/{email_id}/autopilot/dismiss` | Hide an autopilot reply draft (classification chips stay) |
 | GET | `/api/email/inbox?needs_reply=1` | Inbox filtered to autopilot-flagged inbound awaiting a reply |
 | POST | `/api/webhooks/twilio/…` | Twilio voice webhooks (inbound, dial-action, call-status, recording-status, transcription, record-done). Unauthenticated but X-Twilio-Signature-validated |
+| GET/POST/PUT/DELETE | `/api/research/icp-profiles[/{icp_id}]` | ICP profiles (member-readable; writes admin-only; max 10/org) |
+| GET | `/api/research/prospects?status=` | Discovery-staged prospect suggestions (default pending) |
+| POST | `/api/research/prospects/{id}/accept` | Convert prospect → lead (source `research_discovery`); 409 if already actioned |
+| POST | `/api/research/prospects/{id}/dismiss` | Dismiss a prospect (never re-suggested) |
+| POST | `/api/research/dossier/{entity_type}/{entity_id}` | Queue a dossier compile (company/lead/deal; dedups to in-flight one) |
+| GET | `/api/research/dossiers/{entity_type}/{entity_id}` | Dossier history for a record, newest first |
 
 ### Leads
 
@@ -806,6 +813,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### Early July 2026 — Research Autopilot: enrichment you can trust, prospects that find you
+
+AI enrichment is now **web-grounded with citations** — the old enrich literally asked Claude to "generate plausible" firmographics; it now researches the company/person via Anthropic web search, stores **sources, per-field confidence and a retrieved-at stamp**, fills only empty fields as before, and the UI shows a **Verified/Unverified badge**, a collapsible Sources list and an explicit "Unverified: …" line (all four enrich surfaces: leads, companies, contacts, capture). Define **ICP profiles** in the new Settings → Research card (verticals, sizes, geos, signals) and a **weekly discovery agent** (Mon 06:45) researches net-new matching companies — deduped against your whole CRM and everything it ever suggested — and stages them as **Prospects on the Leads page**: Accept converts to a lead carrying the rationale + sources, Dismiss means never again. Every lead/company/deal gets a **"Compile dossier"** button (Overview / news / key people / talking points, citation-marked, queue-processed), and a **meeting-prep agent** scans the next 24h of scheduled calls, Google Calendar events and confirmed bookings, auto-compiles a brief for matched CRM entities and files a "Review prep brief" suggestion. New `researcher` agent in Settings → AI Agents (per-org toggle/model/persona); all research calls run web-search-capped, cost-logged (searches billed into `ai_call_log`) and under the daily AI cap. EN/DE parity throughout.
 
 ### Early July 2026 — Telephony: the phone number goes live
 
