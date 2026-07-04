@@ -652,6 +652,11 @@ These endpoints power the marketing site and are public — auth is the absence 
 |--------|----------|-------------|
 | POST | `/api/newsletter` | Newsletter signup. Body: `{email, source}`. Idempotent on email (duplicates return 200 without re-sending the welcome). Used by the footer form, the `/demo` page's "notify me when sandbox is live" capture, and any future opt-in surface |
 | POST | `/api/partners/agency-application` | Founder Tier / Agency Partner application from the marketing `/partners` page. Body: `{full_name, work_email, company, website, linkedin, three_clients_text, founder_tier_intent}`. Inserts into `partner_applications`, fires the admin notification cascade (in-product → WhatsApp → email-to-every-admin) and sends the applicant an auto-response. Returns `{ok, application_id}` |
+| POST | `/api/admin/partner-applications/{id}/approve` | Super-admin. Creates the partner (terms snapshot, founder slot, referral code wired into attribution), flips the application to `approved`, sends the welcome email (opt-out). Body `{notes?, booking_url?, as_standard?, send_email?}`; 409 on already-approved / slot-full (use `as_standard`) |
+| POST | `/api/admin/partner-applications/{id}/reject` | Super-admin. Flips to `rejected`; optional generic decline email (default off; internal reason never leaves reviewer_notes) |
+| GET/PUT | `/api/admin/partners[/{partner_id}]` | Super-admin. List (+ `founder_slots {total, used, remaining}`, per-partner referred-licence counts, 90-day condition) / pipeline update `{stage, notes}` (approved → certified → agreement_signed → active, paused suspends attribution) |
+| POST | `/api/admin/partners/{partner_id}/onboardings` | Super-admin. Record a delivered onboarding; returns `condition_met_90d` for the founder free-licence condition |
+| GET | `/api/partners/founder-slots` | Public. `{total, remaining}` founder slots — powers the live count on `/partners` |
 | GET | `/api/booking/{user_id}/info` | Public booking host info (name, avatar, welcome message) plus a `meeting_types` array of active types (`type_id`, `label`, `description`, `duration_minutes`). Powers the `/book/:userId` route's header and type picker |
 | GET | `/api/booking/{user_id}/available` | Available slots for a given date. Requires `type_id` query param (duration derives from the meeting type). May return `at_capacity: true` when that type's daily cap is reached |
 | POST | `/api/booking/{user_id}/book` | Public booking submission. Body requires `type_id`; accepts an `Idempotency-Key` request header so retrying clients can't double-book. Returns 400 `unknown_or_inactive_meeting_type` or 409 `day_at_capacity`. Sets the row to `pending_confirmation` with a single-use token; deferred side-effects fire on confirm |
@@ -816,6 +821,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### Early July 2026 — Founding-partner approve flow
+
+"Approve" on a Founder-Tier application is now a real commercial act, not a triage label. Approving (Admin → Partners) creates the partner with a **snapshot of the published terms** (€500/licence + €750/onboarding paid within 14 days, 20% of maintenance renewals, free licence conditional on 3 onboardings within 90 days of signing), reserves one of the **10 founder slots**, mints a referral code that plugs straight into the existing attribution + commission ledger (their referred sales auto-credit from day one), and sends a personal welcome email with the next step — booking the 30-minute discovery call. The panel gains approved/rejected states, a courteous opt-in decline email, and a **Partners pipeline** (approved → certified → agreement signed → active, with onboarding tracking against the 90-day condition and referred-licence counts). If a founding partner later creates a TAKO account, self-registration links their existing record instead of minting a duplicate code. The public `/partners` page now shows the **live** founder-slot count.
 
 ### Early July 2026 — German call transcription (Automation-Max 4b)
 
