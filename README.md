@@ -229,7 +229,7 @@ The four `STRIPE_PRICE_*` ids are also surfaced in `backend/.env.example` — if
 | Backend | Python 3.11, FastAPI, Motor (async MongoDB) |
 | Database | MongoDB |
 | Auth | Native Google OAuth 2.0 → dual-token JWT (15-min access / 7-day refresh; legacy 7-day single-token still honoured) |
-| AI | Anthropic Claude (`claude-sonnet-4-20250514`) via `anthropic` Python SDK |
+| AI | Anthropic Claude (`claude-sonnet-4-6`) via `anthropic` Python SDK |
 | Email | Resend (primary, configurable `SENDER_EMAIL` — founder-led `florian@tako.software` is the production default; `REPLY_TO_EMAIL` routes replies to a shared mailbox), Kit.com (optional subscriber lists). Per-message pacing via `RESEND_SEND_DELAY_S` (default 250ms ≈ 4 sends/sec) keeps batches under Resend's request-per-second cap. |
 | Payments | Stripe + UNYT Token (Arbitrum) |
 | Calling | Twilio Voice API (inbound forward/voicemail/recording + outbound click-to-call) |
