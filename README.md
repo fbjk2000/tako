@@ -822,6 +822,18 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Multi-pipelines with qualification criteria: deals that advance themselves (with your approval)
+
+Deals can now live in **several named pipelines** (Client, Partner, …), each with its own stages — and every stage can carry **qualification criteria** the platform works on for you:
+
+- **Pipelines as real config** (Settings → Pipelines): stages with drag-reorder, closing stages carry an **outcome** (won/lost — a custom "Closed Won" stamps `won_date` exactly like the built-in), per-stage probability, and per-stage **entry tasks** that are auto-created for the deal owner the moment a deal enters the stage. Orgs that never touch this keep working unchanged on a built-in default derived from their existing deal stages — zero migration.
+- **Qualification criteria per stage**, three kinds: **field checks** (deterministic, free — "company size ≥ 50", "email present", dotted paths into enrichment/custom fields), **AI judgments** ("has a budget signal been confirmed?" — answered by grounded, citation-backed AI, cost-capped), and **manual checks** your team ticks off on the deal.
+- **The engine does the legwork**: a 5-minute worker re-evaluates changed deals, runs AI judgments only when they're the last gap, and — when an unmet check is data-shaped — **auto-runs Research Autopilot enrichment on the linked company/lead before ever asking a human** (budgeted, deduped, cooldown-stamped).
+- **Ready deals queue for one-click approval**: when every entry criterion of the next stage is met, a **ready-to-advance suggestion** appears in Approvals (with the full criteria checklist, evidence and citations) and the 17:30 digest. **Accept performs the move** — outcome stamping, entry tasks, audit trail, `deal.stage_changed` webhook (now carrying `pipeline_id`). Readiness regressing retires the suggestion automatically.
+- **On the board**: pipeline tabs, readiness chips on every card ("2/3 → Proposal"), and a Qualification panel in the deal dialog (re-check / AI check / manual check-off).
+- **Agents joined in**: Berny/@tako gained a `propose_stage_move` tool — CONSULT-tier as always, it files a suggestion for a human to approve, never moves the deal itself.
+- Stage moves are now **validated against the pipeline's stage set** (free-string stages were how boards and reports drifted apart), and the whole feature shipped through a 5-dimension adversarial review (14 confirmed findings, 13 fixed pre-merge). Design doc: `docs/operations/2026-07-09-multi-pipelines-qualification.md`.
+
 ### Mid July 2026 — Sales-rep readiness: Approvals that flow, honest Private life, in-app guidance, Linear + Nuclino
 
 One package to make a new sales rep productive on day one:
