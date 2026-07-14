@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Multi-word search fix + the candidate record grows up
+
+Searching **"karen williams"** used to return nothing — the whole query string was matched against each field separately, and a name stored split across first/last name could never match. Now every search box tokenises the query: each word must match at least one field (`search_core`, shared by the TopBar quick-search, the Leads/Contacts list filters and their backend `q` params). Quick-search also covers **HR candidates** now (HR-entitled workspaces + HR-capable roles only) and deep-links straight into the job funnel with the drawer open.
+
+The ATS candidate drawer became a real record:
+
+- **Application / Notes block** — landing-page applicants' answers live on the CRM lead they arrived as; the drawer now shows the linked lead's notes in full (plus a **View lead** link), instead of hiding them. `GET /hr/candidates/{id}` embeds `source_lead`; a one-shot, idempotent backfill (`scripts/backfill_candidate_lead_links.py` / `backfill-candidate-lead-links.yml`) links pre-existing candidates to their lead by email.
+- **Edit in place** — name, email, phone, notes, tags and stage are editable from the drawer (same whitelist API as the Kanban drag).
+- **Activity timeline** — candidate created, stage changes, edits, notes, scorecards, CV updates, plus tasks and emails involving the applicant, in one chronological feed (the same `audit_events` trail leads and deals use — appended at write time, with a note composer in the drawer).
+- **Scoring without a CV** — "Score" on a web-form applicant now scores against their application answers (the linked lead's notes) instead of erroring; the 400 only remains when neither a CV nor notes exist.
+
 ### Mid July 2026 — Leads flow into the hiring funnel: quick actions + tag-based auto-sourcing
 
 Getting an applicant lead into the ATS used to mean opening the lead editor and hunting for the funnel button. Now:
