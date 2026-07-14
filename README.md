@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Leads flow into the hiring funnel: quick actions + tag-based auto-sourcing
+
+Getting an applicant lead into the ATS used to mean opening the lead editor and hunting for the funnel button. Now:
+
+- **Row + bulk quick actions** (HR-enabled workspaces): every lead row's ⋮ menu has **Add to hiring funnel**, and selecting leads shows the same action in the bulk bar — one job pick (preselected when only one job is open), one confirm, done. Bulk fan-outs report added / already-in-a-funnel / failed tallies.
+- **Tag-based auto-sourcing**: a job (create dialog or the new Automation card on the job page) can declare **auto-source tags** — e.g. `job-application`. From the moment the tags are set, every new lead arriving with one of them is added to that job's funnel automatically by a 60s worker (`hr_auto_source`). Historical leads are never swept up (enablement timestamp is the floor), a lead lands in at most one funnel org-wide, and a re-submitted application (same email on the same job) is skipped instead of duplicating the Kanban card.
+- Sourcing a lead that's already a candidate on another job now returns a clean **409 with the other job's name** (was a latent 500 — the idempotency check was per-job while the unique backstop is org-wide).
+
 ### Mid July 2026 — Multi-pipelines with qualification criteria: deals that advance themselves (with your approval)
 
 Deals can now live in **several named pipelines** (Client, Partner, …), each with its own stages — and every stage can carry **qualification criteria** the platform works on for you:
