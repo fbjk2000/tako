@@ -822,6 +822,12 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Hiring funnel polish: full-column drag-and-drop, clickable links on the record, ops scoring
+
+- **Kanban drag-and-drop fixed**: the drop zone in each column only covered the top ~200px (the flex row stretched columns to equal height but the droppable list didn't stretch with them) — you had to drop a candidate at the very top of the next column. The list now fills the whole column, so a card can be dropped anywhere in it.
+- **Links on the candidate record are clickable**: URLs in the recruiter notes and in the imported application text render as safe external links (plain-text parsing — no HTML, no non-http schemes).
+- **Ops scoring**: `scripts/score_job_candidates.py` + a "Score job candidates" workflow — the batch twin of the in-app "Score all" button for after bulk sourcing runs, reusing the app's own AI plumbing (caps, spend logging, ai_call_log) inside the backend container.
+
 ### Mid July 2026 — Multi-word search fix + the candidate record grows up
 
 Searching **"karen williams"** used to return nothing — the whole query string was matched against each field separately, and a name stored split across first/last name could never match. Now every search box tokenises the query: each word must match at least one field (`search_core`, shared by the TopBar quick-search, the Leads/Contacts list filters and their backend `q` params). Quick-search also covers **HR candidates** now (HR-entitled workspaces + HR-capable roles only) and deep-links straight into the job funnel with the drawer open.
