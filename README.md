@@ -844,6 +844,16 @@ The pipeline is now the outreach surface — no more hopping to Leads and rebuil
 - **Links on the candidate record are clickable**: URLs in the recruiter notes and in the imported application text render as safe external links (plain-text parsing — no HTML, no non-http schemes).
 - **Ops scoring**: `scripts/score_job_candidates.py` + a "Score job candidates" workflow — the batch twin of the in-app "Score all" button for after bulk sourcing runs, reusing the app's own AI plumbing (caps, spend logging, ai_call_log) inside the backend container.
 
+### Mid July 2026 — The candidate card becomes an action hub; meeting requests join Approvals
+
+Opening an applicant's card now lets you do everything from within (no hunting through other pages):
+
+- **Send email** — the outreach composer (merge tokens, reply-to, booking link) opens right from the drawer for that one candidate; sends are tracked per-recipient and land on the record + timeline.
+- **New task** — the real task dialog opens *in* the drawer, pre-linked to the applicant's lead (visible hint), so the task shows up in Tasks/Pulse and on the candidate timeline.
+- **Log call** — direction + note, straight onto the activity timeline (`call_logged` audit events).
+- **Move to Contacted on send** — messaging entry-stage candidates offers "Move {n} to 'Contacted' after send" (org-config aware: first → second active stage, stage-move audit rows, stage auto-message templates fire like a manual drag).
+- **Meeting requests in Approvals** — pending booking approvals (guests who picked a slot via your booking link) now appear on `/approvals` alongside task suggestions, drafts and prospects, with inline Approve meeting / Dismiss (same `/bookings` endpoints).
+
 ### Mid July 2026 — Multi-word search fix + the candidate record grows up
 
 Searching **"karen williams"** used to return nothing — the whole query string was matched against each field separately, and a name stored split across first/last name could never match. Now every search box tokenises the query: each word must match at least one field (`search_core`, shared by the TopBar quick-search, the Leads/Contacts list filters and their backend `q` params). Quick-search also covers **HR candidates** now (HR-entitled workspaces + HR-capable roles only) and deep-links straight into the job funnel with the drawer open.
