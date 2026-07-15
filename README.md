@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Message candidates from the hiring board
+
+The pipeline is now the outreach surface — no more hopping to Leads and rebuilding your selection from memory:
+
+- **Select on the Kanban**: checkboxes on candidate cards (a column-header checkbox selects the whole stage) → a bulk bar appears → **Message**. The compose sheet shows exactly who will receive it (no-email applicants are flagged and skipped), supports merge tokens ({{first_name}}, {{name}}, {{job_title}} = the job's title) and one-click insertion of your booking link, and remembers your reply-to.
+- **Outreach state on every card**: Sent / Replied / Bounced / Queued chips, fed by the campaign engine's per-recipient tracking. Replies (existing inbound webhook) flip the chip and are readable in the candidate drawer's timeline.
+- Under the hood it's the existing campaign machinery — each send creates/reuses a "Hiring · {job}" campaign with candidate-keyed recipient rows (new `hr_candidate` entity type), forced onto the per-recipient tracked path (never the Kit broadcast). Applicants are exempt from the double-opt-in gate like contacts (they applied). Also fixed: campaign follow-up replies now honour the campaign's sender/reply-to identity, and merge fields render for candidates.
+
 ### Mid July 2026 — Hiring funnel polish: full-column drag-and-drop, clickable links on the record, ops scoring
 
 - **Kanban drag-and-drop fixed**: the drop zone in each column only covered the top ~200px (the flex row stretched columns to equal height but the droppable list didn't stretch with them) — you had to drop a candidate at the very top of the next column. The list now fills the whole column, so a card can be dropped anywhere in it.
