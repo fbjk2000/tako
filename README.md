@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Stage-driven candidate messaging: the pipeline answers applicants for you
+
+Every candidate stage can now carry an **auto-message template** (HR → Templates → candidate stages → Auto-message): when a candidate enters the stage — Kanban drag, auto-sourcing, hire or disposition — the stage's templated email is queued for them automatically.
+
+- **Auto-acknowledge applications**: put a template with your booking link on the entry stage and every new applicant gets "thanks — book a call" within a minute of arriving, with zero clicks.
+- **Delay = safety window**: a template can wait N minutes before sending; moving the candidate out of the stage within the window **cancels the send** (a mis-drag onto Rejected never fires the decline). Sent once per candidate per stage, ever.
+- Under the hood: one campaign per job+stage (`hr_outreach_stage`, HR-fenced, pinned to per-recipient tracking), `hold_until` outbox semantics on recipient rows, and the hr_auto_source worker delivering due rows each minute — which also makes any previously failed board-outreach send self-heal.
+
 ### Mid July 2026 — Message candidates from the hiring board
 
 The pipeline is now the outreach surface — no more hopping to Leads and rebuilding your selection from memory:
