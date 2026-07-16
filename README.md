@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Send attachments with candidate outreach + real HR document uploads
+
+Sending a contract to a candidate is now a first-class flow:
+
+- **Attachments on Message candidates**: the hiring-board compose sheet takes up to 5 files (15MB total) — attach the contract, hit Send, and every recipient gets it. Files ride the campaign engine's per-recipient path (attachments force the tracked lane, never the Kit broadcast), and a send that can't load its attachment **aborts instead of going out without it**.
+- **Employee Documents upload fixed**: the Upload button on the employee record's Documents tab was invisible (a phantom Tailwind class rendered it white-on-white) — now a proper button, upload verified end-to-end. A new grep-proof test fails the suite on any future `*-tako-*` colour class that isn't in the palette.
+- **HR → Documents uploads real files**: the org-wide Documents page previously asked you to paste a "storage key/URL" by hand; its dialog now has an actual file picker (title auto-fills from the file name) and rows gained the missing Download action (legacy URL-based rows still open).
+
 ### Mid July 2026 — Stage-driven candidate messaging: the pipeline answers applicants for you
 
 Every candidate stage can now carry an **auto-message template** (HR → Templates → candidate stages → Auto-message): when a candidate enters the stage — Kanban drag, auto-sourcing, hire or disposition — the stage's templated email is queued for them automatically.
