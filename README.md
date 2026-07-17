@@ -834,6 +834,7 @@ Findings from a multi-agent security audit, each verified end-to-end before ship
 - **Invite fan-out capped.** The invite email/CSV endpoints reject > 100 recipients and bound the CSV upload size, so the sending domain can't be turned into a spam relay; inviter/org names are HTML-escaped into the email.
 - **Kit.com endpoints authenticated.** All Kit account/forms/tags/subscribers/broadcasts management routes now require a logged-in user (writes require admin); only the public lead-magnet subscribe flow stays open.
 - **Edge hardening (Caddy).** Request bodies are capped at 25 MB and `X-Forwarded-For` is overwritten with the real peer so the per-IP login throttle can't be spoofed; the app derives the client IP from the trusted hop.
+- **Multipart DoS closed at the framework layer (CVE-2024-47874).** FastAPI (0.110.1 → 0.115.14) and Starlette (0.37.2 → 0.41.3) were upgraded together so Starlette's default 1 MB `max_part_size` bounds the memory a malicious `multipart/form-data` request can consume. The cap applies only to non-file form fields; file uploads (CSV/xlsx import, CV/document uploads, outreach attachments) stream to disk unchanged. Full backend suite green at parity (1247 tests); complements the 25 MB edge cap above.
 
 ### Mid July 2026 — Send attachments with candidate outreach + real HR document uploads
 
