@@ -822,6 +822,19 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Mid July 2026 — Security hardening sweep (audit quick-wins)
+
+Findings from a multi-agent security audit, each verified end-to-end before shipping:
+
+- **Stored-XSS in the inbox closed (critical).** Inbound email HTML in the reading pane is now sanitised with DOMPurify before render (matching every other HTML view), so a crafted message can no longer run script in the app origin and steal a session. The autopilot draft is sanitised too.
+- **Credentials out of URLs.** Password-reset (token + new password), forgot-password (email), and the Google OAuth callback (access + refresh tokens) no longer travel in query strings where proxy/APM logs and `Referer` capture them — reset/forgot move to JSON bodies, OAuth tokens move to the URL fragment.
+- **Mass-assignment blocked.** `PUT /leads|/contacts|/tasks` now strip immutable/ownership keys (`organization_id`, `created_by`, id fields …) before the Mongo `$set`, so a tenant can't re-home a record into another org or forge provenance.
+- **Chat tenant isolation.** Message delete and reaction toggle are scoped to the caller's `organization_id` and gated on channel membership/moderator rights (DM privacy preserved) — no cross-tenant delete or existence-oracle.
+- **User-enumeration removed.** Forgot-password always returns a generic 200; login runs a constant-time dummy bcrypt for unknown accounts.
+- **Invite fan-out capped.** The invite email/CSV endpoints reject > 100 recipients and bound the CSV upload size, so the sending domain can't be turned into a spam relay; inviter/org names are HTML-escaped into the email.
+- **Kit.com endpoints authenticated.** All Kit account/forms/tags/subscribers/broadcasts management routes now require a logged-in user (writes require admin); only the public lead-magnet subscribe flow stays open.
+- **Edge hardening (Caddy).** Request bodies are capped at 25 MB and `X-Forwarded-For` is overwritten with the real peer so the per-IP login throttle can't be spoofed; the app derives the client IP from the trusted hop.
+
 ### Mid July 2026 — Send attachments with candidate outreach + real HR document uploads
 
 Sending a contract to a candidate is now a first-class flow:
@@ -892,7 +905,6 @@ Deals can now live in **several named pipelines** (Client, Partner, …), each w
 - **On the board**: pipeline tabs, readiness chips on every card ("2/3 → Proposal"), and a Qualification panel in the deal dialog (re-check / AI check / manual check-off).
 - **Agents joined in**: Berny/@tako gained a `propose_stage_move` tool — CONSULT-tier as always, it files a suggestion for a human to approve, never moves the deal itself.
 - Stage moves are now **validated against the pipeline's stage set** (free-string stages were how boards and reports drifted apart), and the whole feature shipped through a 5-dimension adversarial review (14 confirmed findings, 13 fixed pre-merge). Design doc: `docs/operations/2026-07-09-multi-pipelines-qualification.md`.
-
 ### Mid July 2026 — Sales-rep readiness: Approvals that flow, honest Private life, in-app guidance, Linear + Nuclino
 
 One package to make a new sales rep productive on day one:
