@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Inbound email subjects decoded (Approve-and-send fix)
+
+Subjects fetched over IMAP were stored exactly as they arrived on the wire: RFC 2047 encoded words undecoded and folded header lines still carrying their CR/LF. Long or non-ASCII subjects showed up as `=?UTF-8?Q?...?=` gibberish in the Inbox and Approvals, and clicking "Approve & send" on such a draft failed with "Header values may not contain linefeed or carriage return characters" because the fold's linefeed rode along into the outbound reply subject.
+
+- **Parse-time decode.** `_parse_message_headers` now runs subjects through `decode_mime_header` (RFC 2047 decode plus whitespace unfold), so new rows store clean single-line text everywhere it surfaces (Inbox, Approvals, AI draft prompts, team-chat notifications).
+- **Old rows still send.** The Approve-and-send path decodes the stored subject before building the `Re:` reply, so drafts created before this fix go out with a human-readable subject and no crash.
+- **Last line of defense.** `build_message` flattens any residual CR/LF in a subject instead of letting `EmailMessage` reject the header.
+
 ### Mid July 2026 — Security hardening sweep (audit quick-wins)
 
 Findings from a multi-agent security audit, each verified end-to-end before shipping:
