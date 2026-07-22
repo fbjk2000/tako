@@ -822,6 +822,15 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Org-configurable qualification rubric + structured lead scoring
+
+Organizations can now supply a free-text LLM **qualification rubric** (a scoring framework) that TAKO applies to lead generation and lead scoring, capturing a generic structured verdict on the record. The rubric is opaque config, so a team's own framework (blockers, weighted clusters, tiers, pitch angles) drives the AI without any code change.
+
+- **Rubric config (singleton per org).** New `qualification_rubrics` collection with admin-gated CRUD at `GET/PUT/DELETE /api/research/rubric` (name, `rubric_text`, `enabled`, `apply_to` ∈ {discovery, leads}). Unique per-org index.
+- **Generic structured output.** A fixed `qualification` contract (`tier`, `verdict`, `score`/`max_score`, `subscores`, `blockers`, `highlights`, `cautions`, `recommended_angle`, `confidence`, `evidence`) that any framework maps onto, appended last to the system prompt so it can never break JSON parsing.
+- **Lead generation (discovery).** When a rubric targets discovery, each newly discovered prospect arrives pre-scored and tiered; the block is stored on the suggestion and carried onto the CRM lead on accept. The existing 0-100 fit score is untouched.
+- **Lead scoring (on demand).** `POST /api/research/leads/{id}/qualify` (and the company variant) runs a web-search-grounded scoring pass and writes a `qualification` subdoc. Ungrounded, capped, or unparseable results write nothing (no fabricated scores). All calls reuse the per-org researcher model and the daily AI spend cap.
+
 ### Late July 2026: Inbound email subjects decoded (Approve-and-send fix)
 
 Subjects fetched over IMAP were stored exactly as they arrived on the wire: RFC 2047 encoded words undecoded and folded header lines still carrying their CR/LF. Long or non-ASCII subjects showed up as `=?UTF-8?Q?...?=` gibberish in the Inbox and Approvals, and clicking "Approve & send" on such a draft failed with "Header values may not contain linefeed or carriage return characters" because the fold's linefeed rode along into the outbound reply subject.
