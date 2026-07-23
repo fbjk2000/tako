@@ -822,6 +822,16 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: WhatsApp Business channel (Twilio)
+
+Two-way 1:1 WhatsApp messaging inside TAKO, on the same Twilio account that powers telephony. Inbound customer messages land in a dedicated WhatsApp inbox, auto-match to leads/contacts by phone (the telephony last-8-digits rule), and surface on entity timelines; operators reply from TAKO within WhatsApp's 24h service window.
+
+- **Backend module `backend/whatsapp/`** (bind-deps factory like telephony/mail): signature-validated webhooks `POST /api/webhooks/twilio/whatsapp` (inbound, idempotent on Twilio retries) and `/status` (delivery receipts with forward-only status ranking), `POST /api/whatsapp/send` via the Twilio REST client (freeform plus `content_sid` template passthrough; Twilio 63016 maps to a clear 422 explaining the 24h window), thread and entity feeds, and admin settings `GET/PUT /api/settings/whatsapp`. Org-supplied Twilio credentials (`org_integrations.twilio_*`) beat the platform account for both sending and webhook signature checks; the sender number stays platform-provisioned (same interception risk as the telephony number).
+- **Storage.** New `whatsapp_messages` collection (deterministic per-org thread ids, media refs, matched entity, explicit compose links, read markers). Timeline aggregation section 9 in `get_entity_history` plus a `whatsapp_message` event type in `HistoryTimeline` with a drill-down into the conversation.
+- **Frontend.** `/whatsapp` two-pane inbox (threads with unread badges and window state, chat bubbles with WhatsApp-style delivery ticks, new-chat and `?thread=`/`?to=` deep links), a green WhatsApp button next to Email on Contact/Deal/Company dialogs (mini-thread modal, auto-links sends to the entity), a Settings card (org kill switch, effective sender, copyable webhook URLs), EN/DE strings throughout.
+- **Events + health.** `whatsapp.received`/`whatsapp.sent` fire through the outbound-webhook seam; `/api/health` reports `whatsapp` configuration. 20 new in-process route tests mirror the telephony harness.
+- **Go-live:** point the Twilio WhatsApp sandbox (or a registered sender) at the two webhook URLs and set `TWILIO_WHATSAPP_FROM`; runbook in `docs/operations/2026-07-23-whatsapp-channel-design.md`.
+
 ### Late July 2026: Org-configurable qualification rubric + structured lead scoring
 
 Organizations can now supply a free-text LLM **qualification rubric** (a scoring framework) that TAKO applies to lead generation and lead scoring, capturing a generic structured verdict on the record. The rubric is opaque config, so a team's own framework (blockers, weighted clusters, tiers, pitch angles) drives the AI without any code change.
