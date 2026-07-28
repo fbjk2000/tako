@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Hiring dead ends closed (CV attach, editable jobs)
+
+A pass over the HR surfaces for one defect class: a control labelled with an action the screen could not perform, or data that could be entered once and never corrected.
+
+- **A CV can be attached after a candidate exists.** Inbound landing-page applicants are created with `cv_file_id=None`, and `cv_file_id` is server-owned (excluded from `CANDIDATE_UPDATABLE_FIELDS`), so a CV could never be added post-creation, from the UI or the API; the drawer's block was a viewer labelled "Upload CV". New `POST /api/hr/candidates/{id}/cv` links an uploaded file, extracts and caches its text for `/score`, and audits the attach (`replaced` flag); `DELETE` detaches, clearing `cv_file_id` and the cached `cv_text` together so a removed CV's content does not linger. The drawer block now carries Upload/Replace, Paste and Remove.
+- **Jobs are editable from the funnel.** Only `auto_source_tags` could change after creation. Title, description, status, department, location and employment type were write-once despite being whitelisted server-side. Two consequences: the job description is what every AI match score is compared against, so a thin or wrong JD skewed all scores with no in-product fix; and no job could be moved between draft, open and closed, making the jobs-list status filter unsatisfiable. The funnel now renders the JD (with an explicit warning when empty) and an Edit job dialog.
+- **Hiring from the funnel asks for the terms.** The ATS hire path hard-coded `employment_type='full_time'` and sent no department or start date, so part-time roles produced full-time employee records. It now shares `HireEmployeeDialog` with the leads and contacts paths (new `candidate` entity type).
+- **The employee record shows the fields it collects.** `phone`, `location`, `linkedin_url`, `start_date` and `end_date` are all updatable server-side, and `start_date` is asked for at creation, but none had a field on the record page. All five are editable now.
+- **Mislabelled controls.** The employment-type selects on the employee record and in the hire dialog were labelled with `hr.people.filterStatus` ("Status"), duplicating the Status control beside them; the hire dialog's start date read "Due date"; the documents panel confirmed actions with the button's own label ("Upload", "Delete").
+- 12 new backend route tests, 11 new frontend tests. PRs #164 and #165.
+
 ### Late July 2026: WhatsApp Business channel (Twilio)
 
 Two-way 1:1 WhatsApp messaging inside TAKO, on the same Twilio account that powers telephony. Inbound customer messages land in a dedicated WhatsApp inbox, auto-match to leads/contacts by phone (the telephony last-8-digits rule), and surface on entity timelines; operators reply from TAKO within WhatsApp's 24h service window.
