@@ -822,6 +822,18 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: App-wide usability sweep (delete gates, honest toasts, full German)
+
+The hiring pass above, extended to every module. Same question throughout: where does the UI mislead, dead-end, or destroy without asking.
+
+- **Single-record deletes now ask first.** Deleting several leads or contacts had always opened a confirmation; deleting one lead, company, deal or file fired straight off a row menu or hover button, and on Leads that menu item sits directly under "Convert to contact". A shared `ConfirmDialog` gates all of them, naming the record and stating that it moves to Trash, which is what the delete routes do.
+- **Feedback that lied.** A *failed* checklist-template save reported "Template saved."; starting an onboarding checklist used one i18n key for both the success and the error toast, so a failed start was indistinguishable from a good one (three code paths); a failed job load surfaced "Loading jobs..." as the error; a finished document upload confirmed with the button's own label, "Upload".
+- **Wrong information on screen.** The onboarding assignee chip rendered the raw `user_id`; it now resolves names via the same org-members endpoint `UserPicker` and `TasksPage` use. An open checklist with no tasks claimed "No onboarding checklists yet."
+- **HR hub.** It omitted Hiring, a top-level HR surface in its own sidebar, and was titled "People", the same title as one of its own cards.
+- **Full German coverage for toasts.** 74 toast messages were string literals in the source and stayed English regardless of the language toggle, across booking, signup, password reset, company linking, campaign AI actions and the agent console. All moved to keys with German translations; eight components and pages that had no translation hook at all now have one. A static pass over every touched file verified `t()` resolves at each call site and caught three that would have thrown at runtime.
+- Checked and clean: the Leads, Contacts and Deals edit dialogs expose every server-updatable field; no other screen renders a raw id where a name belongs; template and checklist deletes were already gated.
+- 11 new tests. PRs #166 and #167.
+
 ### Late July 2026: Hiring dead ends closed (CV attach, editable jobs)
 
 A pass over the HR surfaces for one defect class: a control labelled with an action the screen could not perform, or data that could be entered once and never corrected.
