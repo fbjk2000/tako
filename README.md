@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Frontend test drift repaired (PRs #154, #155)
+
+Four frontend suites had been failing on a clean main, each pointing at real drift rather than flaky tests. The qualification rubric panel styled its read-only block with `bg-tako-cloud`, a token that does not exist in the Tailwind palette, so the class silently produced no CSS; it now uses `bg-tako-paper`, the convention for read-only blocks. The inline spinners on /leads and /trash still spun teal where phase 1.7 and every other in-scope page use indigo; both are `border-tako-indigo` now. `useT()` rebuilt `t` on every render, so effects keyed on it re-fired and a stray re-fetch could overwrite what an admin had just saved in the AI spending panel (a save or reset visibly snapping back); `t` is memoized on the active language now. The Constellation test predated the focus filter and now asserts the real behaviour: quiet entities hidden in the default "signal" mode, everything visible after widening to "all". Full frontend suite: 49/49 suites, 313 tests green.
+
 ### Late July 2026: Tasks on a deal
 
 Tasks could always link to deals (Tasks v2 Phase 1 dual-writes `links[]` plus the legacy FK), and /tasks filters and prefills by `?deal=<id>`. But standing on a deal there was no task surface at all: the board cards, the deal detail dialog and the /deals/:id record page neither showed a deal's tasks nor offered a way to add one. The same dead-end class as the July sweep, in the deal-to-tasks direction.
