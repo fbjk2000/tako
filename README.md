@@ -822,6 +822,13 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Dismissal is one write, everywhere
+
+The 2026-07-30 `Diag - task visibility` run found two janitor rows on the live org with `suggestion_status="dismissed"` and no `deleted_at`: dismissed after the July fix shipped. The dismiss route had been fixed; the generic `PUT /api/tasks/{id}` had not. It passes its raw update dict to `$set`, so any caller could record the verdict without the trash move and re-create the dead end.
+
+- **One choke point.** `task_dismissal.py` owns the canonical dismissal shape (verdict, soft delete and provenance in one `$set`). The dismiss route builds its write from it, and the generic task updater routes any `suggestion_status="dismissed"` through it, so a raw update gains the trash move instead of stranding the row. Rows already in Trash keep their deletion provenance, and the external v1 PATCH stays safe by allowlist.
+- **Repair, re-armed.** The run-once repair that moves stranded dismissals to Trash had already stamped its marker, so it would never see the new pair. The same idempotent repair runs once more under a fresh 2026-07-30 marker and heals them on deploy, with no manual prod write.
+- 9 new tests.
 ### Late July 2026: Frontend test drift repaired (PRs #154, #155)
 
 Four frontend suites had been failing on a clean main, each pointing at real drift rather than flaky tests. The qualification rubric panel styled its read-only block with `bg-tako-cloud`, a token that does not exist in the Tailwind palette, so the class silently produced no CSS; it now uses `bg-tako-paper`, the convention for read-only blocks. The inline spinners on /leads and /trash still spun teal where phase 1.7 and every other in-scope page use indigo; both are `border-tako-indigo` now. `useT()` rebuilt `t` on every render, so effects keyed on it re-fired and a stray re-fetch could overwrite what an admin had just saved in the AI spending panel (a save or reset visibly snapping back); `t` is memoized on the active language now. The Constellation test predated the focus filter and now asserts the real behaviour: quiet entities hidden in the default "signal" mode, everything visible after widening to "all". Full frontend suite: 49/49 suites, 313 tests green.
@@ -834,6 +841,7 @@ Tasks could always link to deals (Tasks v2 Phase 1 dual-writes `links[]` plus th
 - **Open-task badges on the board.** Each kanban card carries its open-task count (coral when something is overdue), fed by one `GET /api/deals/task-counts` call per board load and kept in step by the panel's mutations.
 - **Read paths in `deal_tasks.py`.** `GET /api/deals/:id/tasks` plus the counts endpoint match both row eras (`links[]` and pre-Phase-1 `related_deal_id`), and, being shared org surfaces, exclude private tasks (tasks_v2 doctrine) and pending Sentinel suggestions (the established `suggestion_status` idiom). Logic sits outside server.py so it unit-tests against mongomock.
 - 20 new tests (12 backend, 8 frontend), German and English strings included.
+- **Launch-day fixes, same afternoon.** Two found by driving the live dialog: (1) every app dialog is a CSS grid whose items default to `min-width: auto`, so one nowrap `truncate` span (a long task headline, the title row) inflated the grid track past the dialog's max width and clipped everything on the right, including the quick-add button and the Edit action; `[&>*]:min-w-0` on `DialogContent` kills the class app-wide. (2) The board badge counted open tasks with `status $in [todo, in_progress]`, but task status carries `open` and `pending` in the wild; open now means "not finished" everywhere in the module (`tasks_v2.FINISHED_TASK_STATUSES`, the July lesson, now importable), and task reopen accepts any finished spelling instead of only `done`.
 
 ### Late July 2026: Tasks that reached no screen
 
