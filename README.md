@@ -822,6 +822,15 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Tasks on a deal
+
+Tasks could always link to deals (Tasks v2 Phase 1 dual-writes `links[]` plus the legacy FK), and /tasks filters and prefills by `?deal=<id>`. But standing on a deal there was no task surface at all: the board cards, the deal detail dialog and the /deals/:id record page neither showed a deal's tasks nor offered a way to add one. The same dead-end class as the July sweep, in the deal-to-tasks direction.
+
+- **Tasks panel on the deal.** The detail dialog (view mode) and the record page mount one shared panel: open tasks sorted due-first with overdue in coral, done tasks behind a count toggle, checkbox complete/reopen, and per-row assignee names resolved server-side. Quick-add creates the task through the normal `POST /api/tasks` path with the deal link attached and assigned to the caller (the default Pulse scope is "involved", so an unassigned quick-add would reach no screen; that lesson is from the July report). Two jump-offs reuse the existing routes: the full composer via `/tasks?create=true&deal=<id>` and the filtered list via `/tasks?deal=<id>`.
+- **Open-task badges on the board.** Each kanban card carries its open-task count (coral when something is overdue), fed by one `GET /api/deals/task-counts` call per board load and kept in step by the panel's mutations.
+- **Read paths in `deal_tasks.py`.** `GET /api/deals/:id/tasks` plus the counts endpoint match both row eras (`links[]` and pre-Phase-1 `related_deal_id`), and, being shared org surfaces, exclude private tasks (tasks_v2 doctrine) and pending Sentinel suggestions (the established `suggestion_status` idiom). Logic sits outside server.py so it unit-tests against mongomock.
+- 20 new tests (12 backend, 8 frontend), German and English strings included.
+
 ### Late July 2026: Tasks that reached no screen
 
 Florian found six open tasks on /tasks that rendered nowhere, could not be opened, and therefore could never be given a due date. The only way to touch one was a `PUT /api/tasks/{id}`. The report named the date buckets; that turned out to be one of several independent causes. A diagnostic run against the live org after the first fix found two more, including 15 further tasks nobody could see.
