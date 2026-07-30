@@ -822,6 +822,12 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: The PR gate now runs the frontend suite (#173)
+
+`pr-tests.yml` ran backend tests and the locale parity check but never jest, which is how the drift repaired in #154/#155 sat on a clean main for weeks. PRs now get a third job: `npm ci` (npm cache keyed on `frontend/package-lock.json`), then `CI=true npx craco test --watchAll=false --silent` on Node 20.
+
+The job's first cold run immediately caught a real bug: 17 of 49 suites died in transform with `Cannot read properties of null (reading 'traverse')` from the visual-edits babel plugin. `lazyEvaluatePropSource` traversed `importPath.parentPath.parentPath`, but an import's parent already is the `Program` node, whose own parent path is null, so the cross-file prop-source lookup crashed every time it actually executed. That path only runs on a cold transform cache with an importer of the component already parsed into the per-worker AST cache, which is why warm local runs always looked green and an earlier sighting passed as a transient flake (it is order-dependent, not load-dependent, so a worker-count cap would not have helped). One line: traverse the `Program`. Verified with a cold cache locally: 17 suites failed before, 49/49 suites and 313 tests green after, and the job's own rerun in CI is the end-to-end proof, since every CI run is cold.
+
 ### Late July 2026: Dismissal is one write, everywhere
 
 The 2026-07-30 `Diag - task visibility` run found two janitor rows on the live org with `suggestion_status="dismissed"` and no `deleted_at`: dismissed after the July fix shipped. The dismiss route had been fixed; the generic `PUT /api/tasks/{id}` had not. It passes its raw update dict to `$set`, so any caller could record the verdict without the trash move and re-create the dead end.
