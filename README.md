@@ -822,6 +822,20 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### Late July 2026: Reps get a guided working loop (Work Mode, owner lens, auto follow-ups)
+
+Prospects from research discovery could be accepted into the lead list, and then the trail went cold: no ownership, no guidance, no follow-up discipline. Built for the 4Rooks rep onboarding (two inside sales joiners), shipped for every org:
+
+- **Owner lens + claiming.** Leads carry a visible owner. The Leads page gains an All / Mine / Unassigned lens (deep-linkable via `?owner=`), an owner chip per row, and bulk owner assignment. `GET /api/leads` accepts the reserved `assigned_to=unassigned` value for the claimable pool.
+- **Work Mode.** One button walks the rep through their queue (my leads first, then the unassigned pool, best AI score first). Each lead shows an AI approach briefing (angle, opener, talking points, whom to reach, channel and topic; `POST /api/leads/{id}/briefing`, cached on the lead, cap-aware), one-click call and AI intro email draft (copy + mailto fallbacks, so it works before a mailbox is connected), and four outcome buttons. Logging an outcome is one write (`POST /api/leads/{id}/work/log`): audit event, status progression (new to contacted, interested to qualified, dead end to unqualified), claim-on-work for unassigned leads, and the follow-up task, deduped to one open follow-up per lead with outcome-sized windows and weekend-aware due dates.
+- **Round-robin assignment.** `sourcing_settings` gains `round_robin_assign` and `assign_pool`; accepted prospects land pre-assigned (empty pool means all active regular members, so new reps join the rotation the moment their account exists). Accepted leads are tagged `sourced` for batch addressability.
+- **Auto follow-up on outbound email.** Orgs with `auto_followup_enabled`: sending a mail to a lead's address ensures the follow-up task and advances new to contacted, fire-and-forget after the SMTP send.
+- **Manager visibility.** The Command dashboard's 7-day team activity table adds leads worked and calls per member; the 17:30 org digest gains a per-rep "Team today" block (leads worked, calls, emails sent, tasks done, follow-ups set).
+- **My Day tile.** "My leads" tile jumps straight into Work Mode (`/leads?owner=me&work=1`).
+- **4Rooks rollout migration** (run-once, org-scoped): sourcing autopilot on (round-robin enabled), auto follow-ups on, discovery-enabled ICP ensured, existing research leads tagged, AI trial extended for the ramp, plus one background discovery top-up so the prospects strip refills the night the deploy lands. User onboarding deliberately stays in the normal invite/signup flow.
+- **4Rooks rep invites** (run-once): two single-use, 14-day member invite links (labelled Zara / Pablo) staged with the exact `POST /organizations/invites/link` doc shape and logged under `[4rooks-invites]` for handover; the reps register themselves, so no credential material exists anywhere in code or data.
+- 36 new tests (25 backend, 11 frontend), German and English strings included.
+
 ### Late July 2026: The PR gate now runs the frontend suite (#173)
 
 `pr-tests.yml` ran backend tests and the locale parity check but never jest, which is how the drift repaired in #154/#155 sat on a clean main for weeks. PRs now get a third job: `npm ci` (npm cache keyed on `frontend/package-lock.json`), then `CI=true npx craco test --watchAll=false --silent` on Node 20.
