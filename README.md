@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Attachments, and a way to start an email
+
+Two gaps that made the Inbox unusable as a mail client. **Compose could only be reached by replying** to an open message, or from the Email button on a contact, deal or company record, so an empty inbox had no way in at all. And **attachments did not exist in either direction**: `build_message` took only a body, the compose window had no file picker, and inbound attachments were stored as name-and-size metadata whose binaries were never fetched, so the paperclip in the message list pointed at a file nobody could open.
+
+- **New email.** A compose button at the top of the account rail, opening the same modal with no reply context. The three folder empty states now say what is empty; the old shared string told a user with two mailboxes connected to "connect an email account".
+- **Sending attachments.** Files upload as they are picked (`POST /api/email/attachments`) and the send request carries only their IDs, so a 15 MB PDF never rides inside the send call and a failed send does not lose it. Caps are set against what receivers accept: 15 MB per file, 18 MB per message before base64 expansion, and the extensions every major provider bounces are refused at upload with a reason, rather than by a server somewhere between the two mailboxes. `build_message` grew an `attachments` argument; adding one promotes the message to `multipart/mixed` with the body still first.
+- **Opening attachments.** `GET /api/email/{id}/attachments/{i}/download` serves outbound files from the staging store and inbound ones by fetching the MIME part from the user's own server on demand, never persisting it. Selection prefers the filename over the index, because the stored metadata comes from a BODYSTRUCTURE walk and the fetch reads the parsed MIME tree, and the two do not always enumerate parts in the same order. Anyone who can read the email can download what came with it; the old copy promising downloads "after you log this to CRM" is gone.
+- **Retry keeps the files.** A refused send parks its attachments with the Outbox row, so the retry puts the same files back on the wire instead of quietly delivering the words without the invoice.
+- **Attacker-controlled bytes stay inert.** Downloads are always `Content-Disposition: attachment` with `nosniff`, and an emailed `.html`, `.svg` or `.js` is served as `application/octet-stream`, so a file anyone can send cannot become script running on the TAKO origin.
+- Staged uploads that are never sent are swept hourly after 48 hours. 41 new tests (34 backend, 7 frontend).
+
 ### August 2026: Remote MCP connector, so Claude can work directly in TAKO
 
 TAKO is now a first-class Claude connector. Add `https://tako.software/api/mcp` under Settings > Connectors and Claude reads and writes the CRM as you, in your workspace, with the permissions you approve. Streamable HTTP transport, OAuth 2.1 + PKCE, and TAKO itself is the authorization server: dynamic client registration, rotating refresh tokens, audience-bound access tokens. Dark unless `TAKO_MCP_ENABLED` is set. Full guide in `docs/mcp-connector.md`.
