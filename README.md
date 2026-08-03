@@ -822,6 +822,19 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Remote MCP connector, so Claude can work directly in TAKO
+
+TAKO is now a first-class Claude connector. Add `https://tako.software/api/mcp` under Settings > Connectors and Claude reads and writes the CRM as you, in your workspace, with the permissions you approve. Streamable HTTP transport, OAuth 2.1 + PKCE, and TAKO itself is the authorization server: dynamic client registration, rotating refresh tokens, audience-bound access tokens. Dark unless `TAKO_MCP_ENABLED` is set. Full guide in `docs/mcp-connector.md`.
+
+- **17 tools.** Search, record detail with history, deal lists including stalled-style queries, activity timelines, pipeline summaries; creating contacts, companies, activities and tasks; updating deals with a real before/after diff written into the same `audit_events` the UI reads. No bulk writes and no hard deletes anywhere.
+- **TAKO Documents, a new module.** `db.files` could not answer a single document question: no title, collection, tags, `updated_at`, version or owner, and the extracted text was thrown away after the AI summary. Documents now have collections, tags, owners and append-only version history, each version carrying its text, so "what is in the sales kit", "what is stale" and "revise this without losing what it said" all work. `tako_document_audit` checks a collection against a checklist and flags what has gone quiet.
+- **Tenancy is enforced in one place.** Tools never receive a database handle, only an accessor bound to one token's workspace, so an unscoped query is not a mistake a tool can make. A workspace id passed as an argument is compared against the token and refused.
+- **Three separate scopes.** Read, write, and document-write, flat with no implication between them, so a read-only connection is a real option and "log this call" cannot rewrite the sales collateral.
+- **CRM content is treated as untrusted.** Notes, emails and documents can carry text shaped like instructions, so every tool result is framed as data behind an explicit warning.
+
+Found and fixed along the way: **the CI test gate could never fail.** `unittest ... | tail` ran without `pipefail`, so both the PR gate and the pre-deploy gate returned the exit code of `tail`. A red suite would have deployed. Separately, `mongomock-motor` was never pinned, so 757 of 1472 backend tests were silently skipping in CI. Both fixed; the suite now runs 1551 tests for real.
+
+
 ### August 2026: Sent and Outbox folders, and refused sends stop vanishing
 
 Sent mail was already being stored on every send, body and all. There was simply no query that listed it on its own, so it sat interleaved in the inbox with no way to separate it. Worse, a **refused send raised an error and persisted nothing**: whatever the user had written was gone the moment they closed the modal. Every real cause of a refusal is transient or administrative (a tenant with Authenticated SMTP switched off, an expired grant, a network blip), so the user did nothing wrong and lost their message anyway.
