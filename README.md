@@ -822,6 +822,23 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Sent and Outbox folders, and refused sends stop vanishing
+
+Sent mail was already being stored on every send, body and all. There was simply no query that listed it on its own, so it sat interleaved in the inbox with no way to separate it. Worse, a **refused send raised an error and persisted nothing**: whatever the user had written was gone the moment they closed the modal. Every real cause of a refusal is transient or administrative (a tenant with Authenticated SMTP switched off, an expired grant, a network blip), so the user did nothing wrong and lost their message anyway.
+
+- **Folder tabs.** `/inbox` gains `direction` and `send_status` filters; the list gains Inbox / Sent / Outbox. No migration, the rows were always there.
+- **Outbox.** Refused sends are parked with the body intact and the server's own reason shown inline, retryable in one click. `POST /{email_id}/retry-send` rebuilds from the cached body rather than asking the client to resubmit, so a retry cannot alter or lose what was written. The successful-send write upserts on `(account_id, message_id)`, so a retried message becomes the sent row instead of duplicating.
+
+### August 2026: Microsoft connector hardening after first contact with a real tenant
+
+Everything below was found by connecting one actual Microsoft 365 mailbox. Each item was a silent failure rather than a visible one.
+
+- **The admin-consent link was dead on arrival.** It used `/authorize` with `prompt=admin_consent`, which Microsoft rejects outright (`AADSTS901001`). The tests asserted the URL contained the right scopes and never asked whether Microsoft accepts the endpoint they were sent to: a string test, not a protocol test. Now uses `/v2.0/adminconsent` with `organizations`, verified by fetching the generated URL against live Microsoft (#179). It also has a button now instead of being API-only (#180).
+- **`message_id` uniqueness was global**, meaning the first mailbox in the whole database to see a message owned it forever. A second account holding the same message polled happily, skipped everything, and stayed empty with `sync_status: ok` and no error. The cross-tenant version of that is two customers on one mailing list, where whoever syncs second silently loses the message. Now keyed on `(account_id, message_id)` (#181).
+- **"Reconnect the mailbox" was the wrong advice for disabled SMTP AUTH.** Exchange answers 535 both for a bad token and for a valid token on a mailbox where Authenticated SMTP is off. The code assumed the first and sent people round a loop the fix was not in. Microsoft names the real cause in the response text, which was being discarded (#182).
+- **The connect callback now probes SMTP as well as IMAP** and warns when a mailbox can read but not send, rather than showing a green success that lies (#177).
+- **Env-var workflows no longer leave world-readable secret files.** `cp` to `.bak` and `awk > tmp; mv` both create at root's umask, so every secret update silently re-widened `/opt/tako/backend/.env` to 644, alongside four historical snapshots. Between them they exposed `JWT_SECRET`, `STRIPE_API_KEY`, `ANTHROPIC_API_KEY` and `TAKO_EMAIL_CRED_KEY`, the master key that decrypts every stored mailbox credential (#178).
+
 ### August 2026: Microsoft 365 mailboxes connect again (Entra OAuth / XOAUTH2)
 
 A new rep could not connect her Microsoft 365 work mailbox, and the wizard's own instructions were the reason. Microsoft has permanently removed Basic authentication for IMAP from every Exchange Online tenant, so an address plus app password can no longer sign a Microsoft mailbox into any mail client, and no admin can turn it back on. The old Outlook guide pointed at the consumer app-password page, which does not exist on a work account, so every Microsoft 365 user hit a dead end.
