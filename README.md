@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Microsoft 365 mailboxes connect again (Entra OAuth / XOAUTH2)
+
+A new rep could not connect her Microsoft 365 work mailbox, and the wizard's own instructions were the reason. Microsoft has permanently removed Basic authentication for IMAP from every Exchange Online tenant, so an address plus app password can no longer sign a Microsoft mailbox into any mail client, and no admin can turn it back on. The old Outlook guide pointed at the consumer app-password page, which does not exist on a work account, so every Microsoft 365 user hit a dead end.
+
+- **OAuth connector.** `backend/mail/oauth_ms.py` owns the Entra leg: consent URL, code exchange, refresh with rotation, and the XOAUTH2 SASL string. Three endpoints (`/api/email/oauth/microsoft/config`, `/start`, `/callback`) run the flow. The callback probes IMAP before persisting anything, so a grant that cannot actually read mail never becomes a broken account in the UI.
+- **One credential choke point.** `backend/mail/credentials.py` turns an account row into the right secret (app password, or a freshly refreshed access token) and is now the only place that resolves credentials. The poller, the autopilot and three routes all go through it, so the two auth shapes cannot drift apart. `mail.imap.connect` binds with `oauth2_login`, and `mail.smtp._authenticate` with `AUTH XOAUTH2`, when `auth_kind` starts with `oauth`.
+- **Token hygiene.** Refresh tokens live in the existing encrypted store and are re-encrypted whenever Entra rotates them. Access tokens are cached in memory until shortly before expiry, so a 60-second poll cycle is not a token request per minute per mailbox. A revoked grant is reported with the "Authentication failed" prefix the poller already treats as permanent, so the account asks to be reconnected instead of retrying forever. Re-running the sign-in for the same address swaps the credential in place and keeps history, links and assignments.
+- **Honest wizard.** The Outlook tile now shows "Sign in with Microsoft" and no password field, or explains that the connector is not set up yet when the server has no app registration. The stale app-password guide is gone.
+- Dark until `MS_OAUTH_CLIENT_ID` and `MS_OAUTH_CLIENT_SECRET` are set on the backend. Setup walkthrough in [docs/operations/2026-08-03-microsoft-365-mailbox-connector.md](docs/operations/2026-08-03-microsoft-365-mailbox-connector.md).
+- 20 new tests (18 backend, 2 frontend). Gmail, iCloud and custom IMAP accounts are untouched.
+
 ### Late July 2026: Reps get a guided working loop (Work Mode, owner lens, auto follow-ups)
 
 Prospects from research discovery could be accepted into the lead list, and then the trail went cold: no ownership, no guidance, no follow-up discipline. Built for the 4Rooks rep onboarding (two inside sales joiners), shipped for every org:
