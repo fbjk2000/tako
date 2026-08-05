@@ -822,6 +822,15 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Deterministic AI-spend guards (compai quick wins)
+
+An analysis of trycompai/crm (the open-source agentic CRM) surfaced one operational lesson TAKO had not yet internalised: put deterministic, zero-cost checks in front of every model call, and keep exactly one copy of each spend rule. Three guards shipped, no schema migration, no frontend changes.
+
+- **Machine mail buys no model calls.** Every fresh inbound used to get a Haiku summary in the poller and a Haiku classification in the autopilot queue, and a misread bounce could even get a Sonnet reply draft. The new `backend/mail/automated.py` detects automated senders by address (the noreply family, mailer-daemon/postmaster/bounces, notification and newsletter mailboxes, calendar and SES machine domains, plus an automated Reply-To on a human-looking From). The poller stamps such mail `autopilot_status="skipped"` with a stored `automated_reason` at insert, and the pipeline re-checks as a backstop for docs stamped pending before the guard existed. The email itself still lands in the inbox exactly as before.
+- **Enrichment stands down for a week.** Grounded research is the expensive kind of AI call, and bulk enrich happily re-bought it for records enriched an hour earlier. `research/enrich.recently_enriched` (7 days, reading `enrichment.retrieved_at`) now guards `enrich_lead` and `enrich_company` at the choke point, so every caller inherits it: bulk reports a `skipped_fresh` count, the pipelines worker's cross-deal dedup delegates to the same helper (one copy of the rule), and only the two single-entity routes pass `force=True`, because a human clicking Research on one record always runs.
+- **A PII line in the grounding rules, and the rules written down.** Grounded research may not put a person's email address or phone number into a web search query (search by name, company, and role); `docs/architecture/ai-boundaries.md` records the standing boundaries: deterministic checks before model calls, no customer PII in third-party queries, bodies never leave the mailbox.
+- Verified against compai's other lessons: only-fill-empty merges, sourcing cost brakes, and no auto-created contacts from inbound mail were already in place. 20 new backend tests; the full local suite shows a failure set byte-identical to main (the live-server integration tests), so zero regressions.
+
 ### August 2026: A Drafts folder, so prepared mail is reviewed before it goes out
 
 Server-side drafts have existed since the MCP gap closure: an agent can prepare a message over the connector, and the design insists that preparing and sending are different trust decisions. What was missing was the human half of that bargain. No surface listed the drafts, so a prepared message was invisible until someone stumbled onto the right record. The Inbox folder bar gains a **Drafts** tab (Inbox / Drafts / Sent / Outbox) that turns review-before-send into an actual workflow.
