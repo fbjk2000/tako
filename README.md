@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Agent activity on record timelines
+
+The record history timeline (lead, contact, deal, company) now shows what TAKO's AI did to the record, as first-class events beside emails, calls and edits: the research run the record currently rests on (grounded or not, source count, unverified-field count), every dossier written for it, and every task an agent suggested, with the agent's own "why now" reason and whether the rep accepted or dismissed it. Read-only transparency inspired by compai's Agent tab, built into the surface reps already read instead of a new tab. Private tasks stay excluded (shared-surface rule), and the section is best-effort like the other timeline joins, so a failure can never blank the history. One new `agent` event type in the timeline UI (Bot icon, teal), 9 new backend tests.
+
 ### August 2026: Deterministic AI-spend guards (compai quick wins)
 
 An analysis of trycompai/crm (the open-source agentic CRM) surfaced one operational lesson TAKO had not yet internalised: put deterministic, zero-cost checks in front of every model call, and keep exactly one copy of each spend rule. Three guards shipped, no schema migration, no frontend changes.
