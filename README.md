@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: A Drafts folder, so prepared mail is reviewed before it goes out
+
+Server-side drafts have existed since the MCP gap closure: an agent can prepare a message over the connector, and the design insists that preparing and sending are different trust decisions. What was missing was the human half of that bargain. No surface listed the drafts, so a prepared message was invisible until someone stumbled onto the right record. The Inbox folder bar gains a **Drafts** tab (Inbox / Drafts / Sent / Outbox) that turns review-before-send into an actual workflow.
+
+- **The folder.** Workspace wide and account independent, because reviewing needs no mailbox of your own, only sending does. Rows carry recipients, subject, an **Agent** chip when the draft arrived over MCP, attachment count, and a hover discard behind a confirmation. The tab wears a live count badge fed by the same 30s poll as the list, so a freshly prepared draft is noticeable without visiting the folder. Reachable even with zero accounts connected; the connect-first screen only takes over when there is also nothing to review.
+- **Review mode.** A draft opens in the existing composer, seeded from the server copy. localStorage is bypassed entirely: edits sync back with a debounced PATCH plus a flush on close, so the server draft stays the single source of truth on every device and in the folder list. CRM files referenced by the draft appear as removable chips with their real filenames.
+- **Send consumes the draft.** `POST /api/email/send` accepts a `draft_id` and retires the draft the moment its content becomes an email row, on delivered sends and on SMTP refusals parked to the Outbox alike, so the same message can never go out twice. A validation failure keeps the draft. The retired row keeps its outcome and the resulting email id, so the trail from prepared draft to actual mail stays auditable.
+- **CRM file attachments ride along.** Send accepts `file_attachments` (the `{file_id}` references a draft carries). Bytes are copied into the staged attachment store at send time, so size caps, outbox parking, retry and the download path treat them exactly like uploaded files, and a file id from another workspace is refused.
+- **Found along the way: the drafts list endpoint was unreachable.** `GET /api/email/drafts` was registered after `GET /{email_id}`, so FastAPI matched it as `email_id="drafts"` and answered "Email not found" since the day it shipped. Nothing noticed because the MCP tools read through the accessor, not REST; the folder is the first REST consumer. The drafts block now registers ahead of the parameterised routes, like the attachment routes already did for the same reason.
+- Sending stays a human action: no MCP tool can send, and the no-send guarantees and their tests are untouched. 8 new backend tests, 6 new frontend tests.
+
 ### August 2026: Attachments, and a way to start an email
 
 Two gaps that made the Inbox unusable as a mail client. **Compose could only be reached by replying** to an open message, or from the Email button on a contact, deal or company record, so an empty inbox had no way in at all. And **attachments did not exist in either direction**: `build_message` took only a body, the compose window had no file picker, and inbound attachments were stored as name-and-size metadata whose binaries were never fetched, so the paperclip in the message list pointed at a file nobody could open.
