@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Geo Selector, a map lens over the CRM with saved expeditions
+
+The CRM knew where people were and could not show it. `/map` puts every lead, contact and company on one canvas, lets a rep lasso an area, and turns that selection into a named trip whose invites go out through the existing review-before-send flow. The scenario it was built for: filter to CTOs, lasso Barcelona, save it as "Smart City Congress" with a 50 km radius, and the radius also catches the high-value contact in Sitges who no city-name filter would ever surface.
+
+- **Geocoding is offline and deterministic.** A bundled GeoNames extract (cities over 15,000 people, plus region and country centroids) resolves "Vienna, Austria", "Zürich", "München" and "Bali, Indonesia" without a network call, and re-resolves on every write where a location changed. Zero AI spend, zero paid geo APIs, and no person's location string ever leaves the server. People are clamped to city precision server-side, always, even when the client sends finer coordinates: a person pick is re-resolved against the gazetteer and the sent point is thrown away. Companies may carry street-level pins from Nominatim, which only ever receives a company address.
+- **Pins, filters and selection.** Clustered pins ring-coloured by record type, expedition status or AI score band, with photo or logo where one exists and a monogram where none does. Filters mirror the list views (type, status, tags, industry, title, free text) plus the looking_for and offering signal chips, whose pickers are fed from the values that actually exist in the org. Selection is click, freehand lasso or select-visible, and the polygon is resolved server-side so the selection is authoritative rather than client maths. The action bar reuses the existing bulk paths: tag, create tasks, export CSV, add to an expedition, draft invites.
+- **Expeditions.** A trip carries a place, a radius, dates, our ask and our offer, plus a member board with four columns (shortlisted, invited, accepted, declined). Every real status change writes exactly one audit row onto the record's own timeline. Nothing about a trip is write-once: name, dates, ask, offer, radius and the city itself are all editable, archiving is reversible, and a city the gazetteer cannot resolve is reported rather than silently clearing a location the map could draw.
+- **Invites stay a human decision.** Drafting prepares one message per shortlisted member from a deterministic merge template (record signals plus the expedition's ask and offer, every record-derived string escaped, no model call) and drops them in the Drafts folder. Sending is the existing approval flow, and only on send does the member flip to invited.
+- **Honest coverage.** An Unpinned counter lists the records the map cannot draw, with one-click candidate fixes, and an admin backfill re-geocodes typed locations and fills empty person locations from mail signatures the org already holds. The unpinned query is the exact logical complement of the pin query, so no record can be missing from both.
+- **Behind two locks.** `TAKO_GEO_ENABLED` as the deployment kill switch and the per-org `geo_selector_enabled` grant, both required, mirrored into `/auth/me` so the nav entry never points at a route that would answer 402. Every route is org-scoped on the write half as well as the read half. The company logo proxy is the one place a user-supplied URL is fetched, and it is SSRF-guarded: public hosts on default ports only, no redirects, 100 KB cap, image types only, cached bytes served back only to the org that owns them.
+- Leaflet is confined to one imperative component so Jest never loads it. 1,988 backend tests and 58 frontend suites green. Design doc: `docs/superpowers/specs/2026-08-05-geo-selector-design.md`.
 ### August 2026: Create endpoints stop trusting client-supplied ids and tenants
 
 The CRM create models carry `extra="allow"` so Custom Fields v2 values ride through untouched. That also meant every key a client sent survived validation and landed in `model_dump()`, and each create route then spread that dump over its own server-generated identity and tenant fields. Dict literals are last-key-wins, so an `organization_id` or `lead_id` in the POST body simply overwrote them: an authenticated member of org A could write a record straight into org B's workspace, forge `created_by` provenance, mint a record whose id collided with a known id in another tenant, or pick the Mongo `_id` outright. `update_lead` had blocked exactly this on the update side ("block mass-assignment, e.g. organization_id re-homing"); the create paths never got the same treatment.
@@ -1486,6 +1497,13 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 | DPA legal text for `/api/legal/dpa` | Awaiting counsel review |
 
 ---
+
+## Attribution
+
+The Geo Selector uses two open datasets, both credited in the product as well as here:
+
+- **Map tiles**: © OpenStreetMap contributors, licensed under the Open Database License (ODbL). The attribution control is always visible on the map. The tile server is swappable through `REACT_APP_TILE_URL` if an org wants to self-host.
+- **City data**: GeoNames (`cities15000`, plus admin1 and country centroids), licensed CC BY 4.0. The extract is bundled with the backend and resolved offline, so no location text ever leaves the server.
 
 ## License
 
