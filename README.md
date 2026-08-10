@@ -822,6 +822,21 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: A booking that needs approval can no longer go quiet
+
+The escalation sweep shipped a week earlier made waiting *loud*. It did not make waiting *end*, and it did nothing about what the waiting cost in the meantime. A request that needed host approval wrote a `pending_host_approval` row and nothing else: no calendar event, no lead, no way to act from the notification, and nothing that ever closed the request out. Four real meeting requests were lost this way across two workspaces. One guest had booked the call to complain that nobody at Unyted answers him, and then nobody answered him.
+
+Approving already did the right thing, so this is a surfacing fix rather than a workflow one. Six changes:
+
+- **The request writes its records immediately.** A provisional calendar hold (hatched, amber, titled `Requested: <guest>`) and a lead now land when the request arrives, not on approval. The host's calendar no longer shows a free afternoon that is not free, and the guest exists in the CRM whether or not the meeting ever happens. Approving **promotes** both records in place, so there is never a duplicate event or a duplicate person. Rejecting and expiring take the hold back off the calendar and keep the lead, because the person is still real.
+- **The approval email decides.** It used to say "confirm or reject it in TAKO → Bookings", which costs a login and a search, and four times in three weeks nobody paid it. It now carries Approve and Reject buttons signed with the same HMAC scheme as the campaign unsubscribe link. Opening the link only *displays* the request: mail clients and corporate link-scanners fetch every URL in an inbound message, so a GET that decided would let a security crawler confirm meetings and mail guests on nobody's authority. The decision is a POST the page makes when the host presses the button.
+- **The waiting ends.** A pending request whose slot has passed (plus a 15-minute grace, so a host already sitting in the call can still approve it) is closed as `expired`, and the guest is sent an apology with a link to pick another time. Silence was the worst outcome available and it was also the default one.
+- **No listing can answer "nothing is happening".** `GET /v1/bookings` returns `pending_count` on every response regardless of the status filter, and `tako_list_bookings` defaults to a new `open` status (confirmed **plus** pending_host_approval) instead of `confirmed` alone. A caller asking the obvious question can no longer get a confident zero while somebody waits.
+- **Approval is off by default for new hosts.** On the record we have, the gate produced four losses and zero saves. New `booking_settings` rows are written with `require_approval: false` via `$setOnInsert`. **Existing workspaces are untouched**: a calendar policy already in force is theirs to change, and the gate is now safe to run.
+- **Tasks finally have a URL.** `/tasks/:taskId`, plus `task` in `record_url_patterns`. Tasks were the last record type an agent could create and refer to but not link to, which left the reader scrolling `/tasks` looking for it.
+
+Also fixed: `test_cron_watchdog.py` reimported `scheduled.watchdog` by popping `sys.modules` alone. That stops working as soon as any other test imports the `scheduled` package, because the package attribute survives, the stubs are ignored, and every watchdog assertion quietly reads 0.
+
 ### August 2026: Closing the five gaps that forced a human back into the loop
 
 An agent operating TAKO through the external API and the MCP connector kept hitting places where the product stopped and needed a person. All five shared a failure mode: they were silent.
