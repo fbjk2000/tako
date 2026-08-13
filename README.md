@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: A rep's mail flow works the way she expects (#215, #216)
+
+A new rep at a customer workspace worked her queue for a week and surfaced three mail problems, each of which had shipped green:
+
+- **A "permanent" auth error parked a mailbox forever.** When Microsoft rejected a token once, the poller classified the failure as permanent and never tried again, while the same credentials demonstrably worked on the send path. Her inbox sat dead for four days behind a warning badge. Now a successful send heals the account row on the spot, and "permanent" means a 6-hourly retry instead of never. A transient rejection can no longer become a standing outage.
+- **Drafts introduced her as working for the CRM.** The AI draft prompt hardcoded the vendor name, so every intro mail opened with her "from TAKO" instead of her own employer. The prompt now receives the workspace's company name and is explicitly forbidden from naming the tool it is written in. (#215)
+- **"Send from the lead" bounced her into her desktop mail client.** The Draft Email dialog on a lead row offered only Copy and a `mailto:` handoff (without even a recipient). With a work mailbox connected, the primary action now sends through the connected account and files the mail on the lead, so the thread lives on the record instead of a personal Sent folder. `mailto:` survives only as the no-mailbox fallback, and now carries the recipient. Work Mode's draft card got the same in-app send, plus a fix for the draft body arriving empty (`content` vs `body`). (#215, #216)
+
 ### August 2026: A booking that needs approval can no longer go quiet
 
 The escalation sweep shipped a week earlier made waiting *loud*. It did not make waiting *end*, and it did nothing about what the waiting cost in the meantime. A request that needed host approval wrote a `pending_host_approval` row and nothing else: no calendar event, no lead, no way to act from the notification, and nothing that ever closed the request out. Four real meeting requests were lost this way across two workspaces. One guest had booked the call to complain that nobody at Unyted answers him, and then nobody answered him.
