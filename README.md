@@ -830,6 +830,18 @@ It deliberately POSTs to the same `/calendar/events` endpoint the calendar's own
 
 New underneath: an event linked to a lead, contact, deal or company now writes one meeting row to the record's History (`backend/calendar_activity.py`). The row's timestamp is the meeting's start, not the moment of scheduling, so the timeline shows the slot in the viewer's local time and an upcoming meeting sorts to the top until it has passed. This covers events created from the calendar page too, which stored the link but never told the record. 15 new backend tests, 5 new frontend tests.
 
+### August 2026: The expedition invite can finally be answered
+
+The last invite path with no response mechanism of any kind. The mail from the Geo Selector proposed no time, carried no link, and ended "Would a short get-together work for you?", so the only possible reply was free prose. The board behind it shows shortlisted, invited, accepted and declined, but only the first hop was ever automated: a delivered draft moved a member to invited, while accepted and declined were a dropdown a rep set by hand from whatever arrived in their inbox. Nothing the invited person did could move anything, and every geo route sits behind a session they do not have.
+
+The invite copy now carries Accept and Decline links signed per board member, reusing the token scheme from the calendar work rather than growing a second one, because two HMAC schemes is two sets of bugs. A member is reduced to a `record_type:record_id` principal and fed through the same signing, so the record id never travels in a URL either. They are offered only as a pair, since an Accept with no Decline is a leading question, and only when there is an expedition, since without a board there is nothing an Accept could mean.
+
+The copy also carries the sender's own booking link, which is what "suggest another time" amounts to on this path: the mail proposes no slot, so accepting an unstated time means little on its own, while picking one from a real calendar does. It appears only when the rep actually has an active meeting type, because a booking page with nothing bookable on it is a dead end for the reader.
+
+URLs are data in this template too. They land in an `href`, which is markup, so a value is scheme-checked first and escaped second: escaping alone would leave a `javascript:` URL perfectly clickable. Only `http` and `https` are emitted, and anything relative is dropped, since nothing relative resolves from a mail client.
+
+This is also the one place the board may move backwards. The delivered-draft hook refuses to drag a member who has already answered, because that is bookkeeping catching up; here the member is answering for themselves, so a later answer supersedes an earlier one. `tentative` is refused outright, being a calendar answer with no column on this board, and writing it would produce a status no view knows how to draw. The signing secret is injected into the geo router rather than read from the environment there, because `JWT_SECRET` falls back to a random per-process value when unset, and a second read would sign links with a different key than the route that verifies them. 39 new backend tests.
+
 ### August 2026: An invitation carries its own Accept and Decline
 
 The `.ics` fix below is correct and still was not enough, which live testing showed plainly. A payload can be a flawless scheduling message and the guest's client can still decline to offer RSVP: it resolves the organiser to one of the reader's own accounts, or it does not parse iMIP, or the sending domain does not match. Relying on Outlook, Gmail and Apple all agreeing is a poor foundation for something that has to work for a stranger.
