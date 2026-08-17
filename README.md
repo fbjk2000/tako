@@ -830,6 +830,16 @@ It deliberately POSTs to the same `/calendar/events` endpoint the calendar's own
 
 New underneath: an event linked to a lead, contact, deal or company now writes one meeting row to the record's History (`backend/calendar_activity.py`). The row's timestamp is the meeting's start, not the moment of scheduling, so the timeline shows the slot in the viewer's local time and an upcoming meeting sorts to the top until it has passed. This covers events created from the calendar page too, which stored the link but never told the record. 15 new backend tests, 5 new frontend tests.
 
+### August 2026: The linked-record picker is searchable, and Send says why it did nothing
+
+Two dead ends in the same dialog family, both found while fixing the ones above.
+
+The linked-record picker listed every record in a plain dropdown: 2140 leads in one scroll in the org this was reported from, with no search box, which no amount of row labelling makes usable. It is now a searchable combobox, matching the pattern already used for tag pickers elsewhere. Matching runs over names, company and email address, so typing the address in front of you finds the person whose row shows their name instead.
+
+The filtering is ours rather than cmdk's built-in matcher, and that is the interesting part. cmdk only matches rows that were actually rendered, so a list this size has to be capped to stay responsive, and the cap would then silently shrink what search could reach: a record at position 300 would simply be unfindable. Filtering ourselves means the cap applies to the matches while the search still sees every record. The cap is stated too ("142 matches. Keep typing to narrow them.") because a list that stops at fifty and says nothing reads as the whole list. The closed picker reads its label directly from the record rather than from the capped rows, or a selected record past the cap would show as unnamed.
+
+Separately, the Send button next to an existing event's invite box returned silently on both of its guards. Pressing it on an empty box, or after typing a name instead of an address, produced no request, no message and no clue why. A dead end that looks like a working button is worse than an error, so it now says what it needs. 24 new frontend tests.
+
 ### August 2026: The expedition invite can finally be answered
 
 The last invite path with no response mechanism of any kind. The mail from the Geo Selector proposed no time, carried no link, and ended "Would a short get-together work for you?", so the only possible reply was free prose. The board behind it shows shortlisted, invited, accepted and declined, but only the first hop was ever automated: a delivered draft moved a member to invited, while accepted and declined were a dropdown a rep set by hand from whatever arrived in their inbox. Nothing the invited person did could move anything, and every geo route sits behind a session they do not have.
