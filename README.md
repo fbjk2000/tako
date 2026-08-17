@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Pre-#225 lead replies backfilled onto their timelines (#226)
+
+#225 fixed the forward path: inbound mail matched to a lead now writes its email_links row at match time. History stayed uncovered, and 14 inbound emails on prod carried a recorded lead match with no link row, invisible to the lead timeline. A committed backfill script (dispatched via a workflow_dispatch workflow on the deploy SSH plumbing, dry_run supported) now iterates exactly that miss population and creates each row through the same shipped autopilot helper, so shape and idempotency are identical to the live path; pre-existing rows, including manual Log-to-CRM ones, are never touched. The run reports created/already_linked/remaining, re-measures the miss query afterwards, and spot-checks one lead timeline through the real get_entity_history. Re-running is a no-op. 6 new backend tests.
+
 ### August 2026: Lead replies reach the lead timeline (#225)
 
 #224 put sent mail on lead timelines and left one asymmetry standing: autopilot's inbound attribution wrote an email_links row for a matched contact but recorded a matched lead on the email doc only, so the reply a lead sent back was exactly the event the timeline could not show. Autopilot now writes the same idempotent link row for lead matches (linked_by agent:email_autopilot), and the timeline renders inbound lead mail like any other linked message. This stays a direct write rather than a #196 suggestion because the match is deterministic address equality and a link is an association, not a field overwrite; the automated-sender guard from #194 keeps machine mail out of link creation, and a manual Log-to-CRM row is never duplicated or rewritten. 2 new backend tests.
