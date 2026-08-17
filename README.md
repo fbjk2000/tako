@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Schedule Meeting lives on the record now
+
+Booking a meeting with a lead used to mean leaving the lead: navigate to /calendar, open New Event, re-find the record in a picker of two thousand rows, re-type the email address that was on screen a moment ago. The lead drawer and the contact card now carry a Schedule Meeting action that opens a dialog with all of that already done: the record is linked, the person's address sits in a visible invite field, the title names them, and the slot defaults to the next full hour with duration quick-picks. The card stays open underneath, and the History timeline refreshes in place when the event lands.
+
+It deliberately POSTs to the same `/calendar/events` endpoint the calendar's own dialog uses, so everything that endpoint learned recently fires unchanged: the invitation mail with its own Accept and Decline, the in-app bell for teammates, the reminder cron. A record without an email address, which is most imported leads, gets a plain note that no invitation will go out rather than a silent nothing; the meeting still lands in the calendar.
+
+New underneath: an event linked to a lead, contact, deal or company now writes one meeting row to the record's History (`backend/calendar_activity.py`). The row's timestamp is the meeting's start, not the moment of scheduling, so the timeline shows the slot in the viewer's local time and an upcoming meeting sorts to the top until it has passed. This covers events created from the calendar page too, which stored the link but never told the record. 15 new backend tests, 5 new frontend tests.
+
 ### August 2026: An invitation carries its own Accept and Decline
 
 The `.ics` fix below is correct and still was not enough, which live testing showed plainly. A payload can be a flawless scheduling message and the guest's client can still decline to offer RSVP: it resolves the organiser to one of the reader's own accounts, or it does not parse iMIP, or the sending domain does not match. Relying on Outlook, Gmail and Apple all agreeing is a poor foundation for something that has to work for a stranger.
