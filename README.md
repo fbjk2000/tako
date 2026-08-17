@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Sent mail reaches the lead timeline (#224)
+
+Every composer surface that works leads (Work Mode since #174, the AI assistant, and the drafts flow in #223) has been telling the backend which lead a send belongs to, and the backend has been throwing that away: the send path accepted only contact, deal and company links, so lead links were silently dropped, and lead timelines had no email_links join to read them anyway. A sent mail reached a lead's history only through side effects of send-time address matching, which fails for exactly the leads that matter: the recipient address a rep found by hand differs from the stored one, and 94.6% of 4Rooks leads store no email at all. Now leads are first-class link targets on send and Log-to-CRM (the same four CRM types as tasks, WhatsApp and files), the lead timeline renders every linked mail as a real email event regardless of address, and converted contacts inherit their source lead's mail links, so conversion still never amputates history; a mail linked to both the lead and its converted contact renders once. Autopilot's inbound lead matching still records on the email doc only, and auto-creating lead links from inbound attribution is deliberately left as its own decision. 7 new backend tests. (The withholding described in the #223 entry directly below is repealed by this change: lead-linked drafts now send their link.)
+
 ### August 2026: AI emails on leads are editable, cancelling keeps them, and the From account sticks
 
 Florian's complaint, verbatim: "I still can't edit emails that the AI creates within leads. If I cancel the process the emails do not go into drafts." Both lead surfaces showed generated mail as read-only text: the AI Email Composer dialog offered copy or a verbatim send, Work Mode the same in its pane, and closing either threw the words away.
