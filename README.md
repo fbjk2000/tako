@@ -822,6 +822,16 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: An invitation carries its own Accept and Decline
+
+The `.ics` fix below is correct and still was not enough, which live testing showed plainly. A payload can be a flawless scheduling message and the guest's client can still decline to offer RSVP: it resolves the organiser to one of the reader's own accounts, or it does not parse iMIP, or the sending domain does not match. Relying on Outlook, Gmail and Apple all agreeing is a poor foundation for something that has to work for a stranger.
+
+So the mail now also carries plain Accept, Maybe and Decline links, which depend on no client behaviour at all. They open a public page at `/invite/:eventId`, deliberately outside `ProtectedRoute` because an external guest has no TAKO session and never will. The signed link is the authority, using the same HMAC scheme as the booking decision links and the campaign unsubscribe.
+
+A link in an inbox is a bearer credential handed to the open internet, so the design is mostly about what one link cannot do. Two separate values answer two separate questions. A `handle` says who is answering, derived from the address rather than being it, so the guest's own email never travels in a URL and therefore never reaches browser history, a `Referer` header or a scanner's logs. A `token` says what they may do, with the action inside the signed message, so an accept link cannot be edited into a decline nor aimed at a different event or guest. Beyond the signature, which proves only provenance, the apply site checks what a signature cannot know: the event still exists, it is not in the bin, and the guest is still on the invitee list, so a link held by someone since removed from the meeting goes dead. Following a link only ever displays; the answer is a POST the page makes when a human presses the button, because mail clients and corporate link scanners fetch every URL in an inbound message and a GET that decided would let a crawler accept meetings on guests' behalf. Repeat clicks are ordinary rather than exceptional, so answering twice writes once and notifies once.
+
+The page also takes an optional note, which is the pragmatic form of "propose another time": the guest says what suits them in their own words and a human reads it, rather than TAKO growing a scheduling negotiation to avoid one sentence of prose. 48 new backend tests.
+
 ### August 2026: Every row in the linked-record picker says something
 
 Reported from a screenshot as "this does not look right": the lead dropdown in the New Calendar Event dialog showed a couple of names separated by tall empty gaps. The gaps were records. The picker rendered `{first_name} {last_name}` directly, and 123 of that org's 2140 leads have neither, so it drew 123 full-height rows containing a single space. Real rows, selectable, invisible.
