@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Every row in the linked-record picker says something
+
+Reported from a screenshot as "this does not look right": the lead dropdown in the New Calendar Event dialog showed a couple of names separated by tall empty gaps. The gaps were records. The picker rendered `{first_name} {last_name}` directly, and 123 of that org's 2140 leads have neither, so it drew 123 full-height rows containing a single space. Real rows, selectable, invisible.
+
+A blank row is worse than an ugly one, because it can be linked to a meeting by accident and the closed dropdown then shows nothing at all, leaving no way to tell which record was chosen. Rows now fall back through company name and email address, and only a record that identifies itself in no way whatsoever gets a translated placeholder. The six inline branches, one per linkable type, each of which restated the collection name and the id field and had its own idea of what to display, collapse into one declared table. 16 new frontend tests in `frontend/src/pages/calendar/recordLabel.test.js`.
+
+Not addressed here: the picker still lists all 2140 records with no search box, which is its own problem.
+
 ### August 2026: Linking a person to a meeting now offers to invite them
 
 Found by running the invite flow for real, immediately after the payload fix below went live. An event was created from a lead, the lead was linked, the invite field was left alone, and nothing was sent. The server was right to send nothing: the request carried `title`, `notes`, `location` and `linked_id` and no `invitee_emails` at all. The address was never in the request because the dialog never asked for it, and the lead's record held `florian@marinmaster.com` the whole time.
