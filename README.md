@@ -822,6 +822,14 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Linking a person to a meeting now offers to invite them
+
+Found by running the invite flow for real, immediately after the payload fix below went live. An event was created from a lead, the lead was linked, the invite field was left alone, and nothing was sent. The server was right to send nothing: the request carried `title`, `notes`, `location` and `linked_id` and no `invitee_emails` at all. The address was never in the request because the dialog never asked for it, and the lead's record held `florian@marinmaster.com` the whole time.
+
+The New Calendar Event dialog has two controls that both describe who a meeting is with, a linked-record picker and a free-text invite field, and nothing connected them. Choosing a person and expecting them to be invited is the obvious reading, and it produced an event attached to that person's record with no attendees, no mail, and no indication that anything was missing.
+
+Selecting a lead or a contact now prefills the invite field with their address. Prefill, never an implicit send: the address appears in the visible field so it can be read, edited or removed before saving, because quietly attaching a recipient behind a control not labelled "invite" would mail a customer on the strength of a dropdown. What the operator typed is never overwritten, and the suggestion is replaced only while the field still holds exactly what the picker last put there, so switching from one lead to another cannot leave the first one's address behind. Companies, deals, projects and campaigns do not resolve, since none of them is a person and a generic company inbox is not a meeting participant. When a linked person has no address at all, which is the majority of imported leads rather than an edge case, the dialog says so instead of staying silent. 22 new frontend tests in `frontend/src/pages/calendar/linkedInvitee.test.js`.
+
 ### August 2026: A calendar invite is now actually an invitation
 
 Adding a guest to a calendar event mailed them an `invite.ics` that no mail client would ever offer to answer. Two independent defects, either one sufficient on its own. The payload carried no `METHOD` and no `ATTENDEE` line, which makes it a calendar object rather than a scheduling message: Outlook, Apple Mail and Gmail file that under "add to calendar" and show no Accept, Decline or Tentative. And the attachment shipped raw iCalendar text where Resend expects base64 (the campaign attachment path has always encoded it correctly), so what arrived was not the file we wrote. In-app RSVP existed the whole time and was never the problem, but `/calendar/events/{id}/respond` requires a session and an org membership, so it serves teammates only. For an external guest the mail client is the entire interface, and the interface was blank.
