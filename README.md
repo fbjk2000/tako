@@ -822,6 +822,19 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: An invitation can be taken back
+
+The duplicate meeting from the entry below was deleted in TAKO within the hour. It stayed in four people's calendars anyway, two of them a Journeo customer, because deleting an event sent nothing to anybody. TAKO could invite and could not un-invite: the row went to trash, the guest's calendar never heard, and the only remedy was to write to each person by hand and ask them to delete it themselves.
+
+Deleting an event now withdraws the invitations it sent. The payload is a `METHOD:CANCEL` carrying the same UID as the original at a higher SEQUENCE, with `STATUS:CANCELLED` and the guest named on an ATTENDEE line. Those properties are the whole feature and each of them fails silently: a fresh UID describes an event the client never saw, and a SEQUENCE that does not rise is a stale duplicate by RFC 5545 and is discarded without a word to the guest. The mail is delivered either way, the guest sees nothing, and the ghost meeting stays. So none of the three is left to a caller to get right. The builder derives the UID the same way the invitation did, floors the sequence above what any invitation has ever carried, and events gained a `sequence` field so the number on the wire and the number in the database cannot disagree.
+
+Only the organiser may withdraw an invitation, and the person pressing delete is often not them: in a two-person workspace, defaulting to the deleter is a coin flip, and a cancellation from the wrong organiser is ignored as quietly as a wrong UID. So the address invitations went out under is now recorded on the event when they go out, once, and the cancellation goes out under that. Events from before this, including the ones from the incident, fall back to whoever created them, which is who invited in every create-time send.
+
+Two things it deliberately does not do. It does not mail anybody about a meeting that has already happened, or one nobody was invited to: cancelling last week's call reads as a malfunction. And it does not send at all until the operator has been asked, when the guest list reaches outside the workspace. That delete answers 409 and opens a dialog naming the outside addresses, and the event survives the question, so saying no costs nothing. Prompting is confined to deletes that would actually mail somebody, because a prompt in front of a delete that sends nothing is how people learn to click through the one that matters. A delete that goes through now says what left in the operator's name ("3 guests were told the meeting is cancelled") and counts mail that was actually sent, so a Resend outage cannot be reported as three people told.
+
+The mail follows the delete rather than preceding it: the operator pressed delete, and a mail provider being down is not a reason for the event to still be there afterwards. 79 new backend tests, 10 new frontend tests.
+
+
 ### August 2026: One meeting, created once, mailed once
 
 A rep created one meeting and five people were invited to it twice, two of them a customer. Nothing about it was careless, which is the interesting part. Her access token had expired, so every request in the app was answering 401, refreshing and retrying: correct behaviour that costs a round trip. She pressed Create Event, and because the button stayed enabled and the dialog stayed open and nothing moved, the click looked like it had missed. So she pressed it again. Two events landed 1.02 seconds apart, each one mailed its invitees, and the recipient's phone ended up showing the same 10:00 slot three times, twice from TAKO and once from the Outlook invite that already existed.
@@ -830,7 +843,7 @@ The server now treats a create that repeats a create the same person just made a
 
 The button also locks and spins now. That is not the fix and could not be: a button cannot see a second tab, a replayed request or an MCP client, and the layer that can promise a meeting exists once is the one holding it. The lock exists to remove the dead-looking dialog that produced the second press. Titles are stripped on the way in as well; the real one arrived carrying four leading spaces from a mail client. 16 new backend tests.
 
-Still open, and worth naming: the invitations that went out cannot be taken back. TAKO sends no `METHOD:CANCEL`, so deleting a duplicate here leaves it sitting in everyone's calendar.
+The invitations that went out could not be taken back at the time: TAKO sent no `METHOD:CANCEL`, so deleting a duplicate left it sitting in everyone's calendar. That is closed by the entry above.
 
 
 ### August 2026: Answering an invitation ends somewhere
