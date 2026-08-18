@@ -822,6 +822,17 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: One meeting, created once, mailed once
+
+A rep created one meeting and five people were invited to it twice, two of them a customer. Nothing about it was careless, which is the interesting part. Her access token had expired, so every request in the app was answering 401, refreshing and retrying: correct behaviour that costs a round trip. She pressed Create Event, and because the button stayed enabled and the dialog stayed open and nothing moved, the click looked like it had missed. So she pressed it again. Two events landed 1.02 seconds apart, each one mailed its invitees, and the recipient's phone ended up showing the same 10:00 slot three times, twice from TAKO and once from the Outlook invite that already existed.
+
+The server now treats a create that repeats a create the same person just made as the same meeting, and returns the first event rather than building a twin, so there is no second event to mail anybody. The judgement is deliberately narrow: same organisation, same creator, same start time, and the same title once pasted whitespace and case stop counting. Two people booking the same title in the same minute is a real thing and is left alone, as is the same person booking the same title at a different time, and re-creating something they deleted. Returning the existing event instead of a conflict keeps every caller's path unchanged, so the second press simply looks like it worked, which as far as intention goes it did.
+
+The button also locks and spins now. That is not the fix and could not be: a button cannot see a second tab, a replayed request or an MCP client, and the layer that can promise a meeting exists once is the one holding it. The lock exists to remove the dead-looking dialog that produced the second press. Titles are stripped on the way in as well; the real one arrived carrying four leading spaces from a mail client. 16 new backend tests.
+
+Still open, and worth naming: the invitations that went out cannot be taken back. TAKO sends no `METHOD:CANCEL`, so deleting a duplicate here leaves it sitting in everyone's calendar.
+
+
 ### August 2026: Answering an invitation ends somewhere
 
 Seen on the live page and reported as "this cannot be the last step for the client": accepting an invitation produced a headline, a line of thanks, and nothing else. No way off the tab, no statement of what had just been agreed to, and no answer to the question a guest actually has at that moment, which is whether the meeting is in their calendar.
