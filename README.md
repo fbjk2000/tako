@@ -822,6 +822,16 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Answering an invitation ends somewhere
+
+Seen on the live page and reported as "this cannot be the last step for the client": accepting an invitation produced a headline, a line of thanks, and nothing else. No way off the tab, no statement of what had just been agreed to, and no answer to the question a guest actually has at that moment, which is whether the meeting is in their calendar.
+
+The confirmation is a closing step now. It restates the meeting, title, when and where, because the page carrying those details is gone by the time this one renders. It offers the event as a file to keep, from a new `GET /invite/{event_id}/ics` authorised by the same signed link that opened the page, so it carries no authority the reader does not already hold and a link scanner fetching it changes nothing. And it ends with Done, which tries `window.close()` and then says "You can close this tab now" when the browser refuses, which it always does for a tab opened from a mail client. A button that silently does nothing would be worse than the dead end it replaced.
+
+The download follows the answer. Someone who declined does not want this meeting in their calendar and is told plainly that nothing was added; Maybe still gets the file, because they may well be there.
+
+The file is `METHOD:PUBLISH` with `PARTSTAT=ACCEPTED` and `RSVP=FALSE`, not a second copy of the REQUEST. The question was settled by the click that produced the file, and asking it again invites a contradictory answer through a channel nothing reads. Those two properties became parameters of the .ics builder rather than literals edited out of the finished string: folding can split a property value across lines, and a test caught the replacement silently missing exactly that way. 12 new backend tests, 5 new frontend tests.
+
 ### August 2026: Schedule Meeting lives on the record now
 
 Booking a meeting with a lead used to mean leaving the lead: navigate to /calendar, open New Event, re-find the record in a picker of two thousand rows, re-type the email address that was on screen a moment ago. The lead drawer and the contact card now carry a Schedule Meeting action that opens a dialog with all of that already done: the record is linked, the person's address sits in a visible invite field, the title names them, and the slot defaults to the next full hour with duration quick-picks. The card stays open underneath, and the History timeline refreshes in place when the event lands.
