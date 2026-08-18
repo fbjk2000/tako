@@ -822,6 +822,18 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: A touch can be recorded where it happened
+
+Reported from the field: reps were typing their outreach into the lead's Notes box in prose, "1st touch, 18/08/2026, email + linkedin", one line per touch. They were not being careless. The CRM has stored touches all along, in `db.activities`, and the History timeline has rendered them since the convert carry-forward work, but nothing in the GUI could write one. The collection was reachable from the MCP connector and from linked calendar events only, so a rep who had just emailed a lead had exactly one place to put that fact, and it was a text field no filter, sort or count can reach.
+
+The lead drawer and the contact card now carry a Log Touch action, and it is built to cost two clicks, because a control more expensive than the Notes box it replaces will lose to the Notes box. The channel is a row of chips rather than a select: one click, no menu, every option visible. The date is today, already filled in, backdatable for the Friday write-up of Monday's call and not postdatable, because a touch is something that has happened. The note is optional, and the timeline titles a subjectless touch by its channel instead of printing "(no subject)".
+
+LinkedIn and WhatsApp became first-class channels alongside call, email, meeting and note. Their absence was not cosmetic: they are two of the channels the field team actually works, and being unable to name them is a large part of why touches ended up as prose in the first place. The connector's `tako_log_activity` reads the same vocabulary from the new `backend/touch_log.py`, so a touch logged by a rep and one logged by an agent are the same row. The timeline renders the labels through that module too, since `str.capitalize()` produces "Linkedin" and "Whatsapp", which is not how either brand writes its name.
+
+What makes the rows worth having is the stamp. Anything but a note bumps the record's `last_touched_at`, the denormalised "last real touch" the Context Lens, Sentinel ranking and the smart lists already read, so logged touches answer "who has gone quiet" instead of just filling a diary. A note deliberately does not bump it: an internal annotation is not contact with a human, and treating it as one would quietly mark cold records warm. The stamp never moves backwards either, so writing up an old call cannot make an actively worked record look stale. A backdated touch sent as a bare date lands at noon UTC, which holds the calendar day steady for every reader from UTC-11 to UTC+12. 25 new backend tests, 8 new frontend tests.
+
+The history the team had already written by hand was not left behind. `backend/notes_touches.py` reads those lines back (36 of them across 23 leads on the day this shipped) and `scripts/backfill_notes_touches.py` replays them onto the timeline. A line naming two channels becomes two touches, because "email + call" is two attempts and merging them would hide that the call happened. The ordinal is required rather than a leading digit, since one lead's notes describe a "US1.7 Touch Panel" that a looser pattern turns into a phantom touch. Dates read day-first, corroborated by the prose beside them. The notes themselves are never edited, row ids are derived from the line they came from so a re-run writes nothing, and every row carries `source="notes_backfill"` so the whole replay can be undone without catching anyone else's work. 26 further backend tests.
+
 ### August 2026: An invitation can be taken back
 
 The duplicate meeting from the entry below was deleted in TAKO within the hour. It stayed in four people's calendars anyway, two of them a Journeo customer, because deleting an event sent nothing to anybody. TAKO could invite and could not un-invite: the row went to trash, the guest's calendar never heard, and the only remedy was to write to each person by hand and ask them to delete it themselves.
@@ -846,7 +858,6 @@ The server now treats a create that repeats a create the same person just made a
 The button also locks and spins now. That is not the fix and could not be: a button cannot see a second tab, a replayed request or an MCP client, and the layer that can promise a meeting exists once is the one holding it. The lock exists to remove the dead-looking dialog that produced the second press. Titles are stripped on the way in as well; the real one arrived carrying four leading spaces from a mail client. 16 new backend tests.
 
 The invitations that went out could not be taken back at the time: TAKO sent no `METHOD:CANCEL`, so deleting a duplicate left it sitting in everyone's calendar. That is closed by the entry above.
-
 
 ### August 2026: Answering an invitation ends somewhere
 
