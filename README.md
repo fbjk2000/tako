@@ -832,7 +832,9 @@ Only the organiser may withdraw an invitation, and the person pressing delete is
 
 Two things it deliberately does not do. It does not mail anybody about a meeting that has already happened, or one nobody was invited to: cancelling last week's call reads as a malfunction. And it does not send at all until the operator has been asked, when the guest list reaches outside the workspace. That delete answers 409 and opens a dialog naming the outside addresses, and the event survives the question, so saying no costs nothing. Prompting is confined to deletes that would actually mail somebody, because a prompt in front of a delete that sends nothing is how people learn to click through the one that matters. A delete that goes through now says what left in the operator's name ("3 guests were told the meeting is cancelled") and counts mail that was actually sent, so a Resend outage cannot be reported as three people told.
 
-The mail follows the delete rather than preceding it: the operator pressed delete, and a mail provider being down is not a reason for the event to still be there afterwards. 79 new backend tests, 10 new frontend tests.
+It goes out under the same name the invitation did, "Zara Adrover (via TAKO)", and replies land with her rather than with whoever pressed delete, so From, reply-to and the ORGANIZER inside the file all name one person and the guest's thread stays one thread. Who actually called it off is in the body, where it informs without redirecting the reply to somebody the guest has never heard from.
+
+The mail follows the delete rather than preceding it: the operator pressed delete, and a mail provider being down is not a reason for the event to still be there afterwards. 82 new backend tests, 10 new frontend tests.
 
 
 ### August 2026: One meeting, created once, mailed once
