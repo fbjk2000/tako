@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: A number written correctly is a number that dials (#243)
+
+A rep's UK leads failed through the dialer with "the number is wrong" while the same numbers connected fine from her handset. The dialer's normalizer stripped punctuation and nothing else, so the standard written form `+44 (0)1636 700708` became `+4401636700708`: the trunk zero survived into the dial string, and no carrier accepts that. In her workspace, 46 of 208 lead phones were undialable this way. The normalizer now understands how numbers are actually written: the `(0)` trunk marker is dropped for any country, a bare zero after the country code is dropped where national numbers can never start with 0 (UK, DACH, France, Spain, Benelux; Italy deliberately excluded because its leading zero is part of the number), annotated and multi-number fields dial the leading number deterministically, and invisible direction marks plus non-breaking spaces from phone-pasted numbers are stripped. National formats without a country code are still refused rather than guessed: a wrong guess dials a stranger. On the affected workspace this took dialable numbers from 162 to 196 of 208; the rest are data problems, not dialer problems.
+
 ### August 2026: A touch can be recorded where it happened
 
 Reported from the field: reps were typing their outreach into the lead's Notes box in prose, "1st touch, 18/08/2026, email + linkedin", one line per touch. They were not being careless. The CRM has stored touches all along, in `db.activities`, and the History timeline has rendered them since the convert carry-forward work, but nothing in the GUI could write one. The collection was reachable from the MCP connector and from linked calendar events only, so a rep who had just emailed a lead had exactly one place to put that fact, and it was a text field no filter, sort or count can reach.
