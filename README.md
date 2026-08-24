@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Outbound mail introduces itself with a name (#248)
+
+A rep test-sent himself an email and it arrived from "pablo.ext@4rooks.com": no name, just the address. The Microsoft OAuth connect flow had stamped the mailbox address itself into the account's display_name, so every send from an OAuth-connected mailbox built a From header with no human name in it (password-connected accounts were unaffected because their setup wizard asks for a name). The connect flow now reads the person's directory name from the `name` claim of the id_token Microsoft already returns (the `profile` scope was always requested), and falls back to the connecting user's own TAKO name when a tenant omits the claim. Reconnecting a mailbox self-heals accounts that still carry an address where a name belongs, without ever overwriting a name someone typed into settings themselves. The four live OAuth mailboxes were repaired in place the same day.
+
 ### August 2026: The website catches up with the product (#246)
 
 tako.software still described the June product: four pillars, no map, no inbox, no MCP, and a pricing page that undersold what a licence buys. The marketing site now tells the current story, in the same Dark Cinematic design system.
