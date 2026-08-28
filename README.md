@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### August 2026: Adding a suggested contact sticks and never duplicates (#278)
+
+On a lead's Suggested Contacts, "Add as contact" did create the contact, but it left no lasting trace: the green "Added" pill was throwaway UI state and the suggestion itself stayed on the lead. So after a reload every already-added person showed "Add as contact" again, it looked like the add had failed, and clicking again silently made a duplicate contact. A new atomic endpoint (POST /leads/:id/suggested-contacts/:idx/convert) now creates the contact through the same house create path (company auto-promotion, join rows, webhooks) and removes that suggestion in the same call, matched by identity rather than list index. The frontend drops the row from the trimmed list the server returns, so the add is visible, survives a reload, and cannot be double-applied.
+
 ### August 2026: Deals, companies and contacts open as pages too (#268, #269, #271)
 
 Completes what #264 started: the remaining three list-page detail popups retire, and every entity now lands on its own record page. Each follows the same shape. A card or row navigates to /deals/:id, /companies/:id or /contacts/:id; legacy ?detail= deep links forward there, so the Context Lens on /tasks, chat entity links, a contact's company tile and the related-record lists all keep working untouched. Daily rep actions stay visible on the record page and everything reached a few times a month moves under More. The edit form of each entity becomes its own self-fetching dialog, so any surface can open it without owning the pick-lists.
