@@ -822,6 +822,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: Lead, contact, company and deal rows open in a new tab (#281)
+
+Every entity row navigated only through a JavaScript click handler on a div, so the browser had no URL to work with: right-click offered no "Open link in new tab", and Cmd/Ctrl or middle click could not open a record in a background tab, which is exactly what a rep triaging a list wants. Each row, and the deal kanban card, now carries a stretched, absolutely positioned React Router link to its /<entity>/:id record page, so right-click, Cmd/Ctrl-click, middle-click and copy-link all work natively while a plain click still navigates. Interactive controls (checkbox, status select, kebab menu, the company website link) sit above the overlay so they stay clickable, and the deal card drag handle stays outside it so drag and drop is unaffected. As a side benefit the rows are now real, keyboard-focusable links, which the old div never was.
+
 ### August 2026: Adding a suggested contact sticks and never duplicates (#278)
 
 On a lead's Suggested Contacts, "Add as contact" did create the contact, but it left no lasting trace: the green "Added" pill was throwaway UI state and the suggestion itself stayed on the lead. So after a reload every already-added person showed "Add as contact" again, it looked like the add had failed, and clicking again silently made a duplicate contact. A new atomic endpoint (POST /leads/:id/suggested-contacts/:idx/convert) now creates the contact through the same house create path (company auto-promotion, join rows, webhooks) and removes that suggestion in the same call, matched by identity rather than list index. The frontend drops the row from the trimmed list the server returns, so the add is visible, survives a reload, and cannot be double-applied.
