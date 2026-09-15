@@ -178,26 +178,41 @@ See [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) for the host-level companio
 
 ## Pricing
 
-TAKO is a self-hosted CRM. Purchase once, deploy on your own infrastructure, own your data forever.
+TAKO is sold as six components, each of them bought once per instance or hosted per user per month. The same software either way; only the way you pay differs.
 
-| Option | Price | Notes |
-|--------|-------|-------|
-| **One-time** | €5,000 | Single payment, perpetual licence |
-| **12-month installment** | €500 / month × 12 | €6,000 total, perpetual licence after final payment |
-| **24-month installment** | €300 / month × 24 | €7,200 total, perpetual licence after final payment |
-| **UNYT Token** | Pay in UNYT on Arbitrum | Perpetual licence, any plan (see [UNYT.shop](https://unyt.shop)) |
+**Bought (one time, per instance, net)**
 
-**All licences include:**
-- Unlimited users
-- All CRM features (Leads, Contacts, Deals, Tasks, Projects, Campaigns, Listeners, Files, Calendar, Chat, Calls)
-- Unlimited AI via Claude (platform key included)
-- All integrations (Google, Resend, Kit, Twilio, Meta, Stripe)
-- API access + webhooks
-- First year of updates and maintenance
+| Component | Price |
+|-----------|-------|
+| CRM | €10,000 |
+| ERP | €15,000 |
+| Signing | €5,000 |
+| HR | €2,500 |
+| Geo | €2,500 |
+| Calendar | €2,500 |
 
-**Maintenance renewal** — €999 per year (optional). Renewing keeps you on the latest version with priority support. If you skip renewal your instance keeps running — you simply stop receiving updates.
+Unlimited users on bought licences, source code included. Maintenance and support cost 12% of the purchased licence value per year (the bought prices of the components you paid for), minimum €999, and are optional: skip the renewal and your instance keeps running, you only stop receiving updates. The 30-day money-back guarantee applies to bought licences.
 
-**Partner Programme** — Agencies and consultants earn €500 per customer sale, plus €750 per agency onboarding. Public marketing landing at `/partners` (founder-led EN/DE, six sections incl. live active-partner count + FAQ); authenticated dashboard at `/partners/dashboard` for active partners (referral link, sales, balance, agency-upgrade form). New agency applications email `florian@fintery.com` (override via `PARTNER_ADMIN_NOTIFY_EMAIL`) so the operator can triage from the inbox without opening the admin UI.
+**Hosted (per user per month, net)**
+
+| Component | Per user per month |
+|-----------|--------------------|
+| CRM | €25 |
+| ERP | €40 |
+| Signing | €12 |
+| HR | €8 |
+| Geo | €8 |
+| Calendar | €8 |
+
+Plus €99 per month for the instance. Minimum 3 users; yearly prepay charges 10 months. You get a dedicated EU server with admin and server access, run by TAKO (updates, backups, monitoring). Stop any time and take the instance with you.
+
+**Invoicing** (quotes, invoices, XRechnung, ZUGFeRD, DATEV export) is free for self-hosters and is never sold.
+
+**Legacy plans**: the three self-hosted CRM plans (€5,000 one-time, €500 x 12, €300 x 24) remain valid for existing customers, including their €999 maintenance renewal, but are no longer sold. The UNYT box on the page (pay in UNYT on Arbitrum via MetaMask or [UNYT.shop](https://unyt.shop)) still buys the one-time CRM licence.
+
+**Services** (unchanged): Managed Setup €5,000, Setup + Migration €9,500, Expert Hours €80 per hour with no expiry.
+
+**Partner Programme**: agencies and consultants earn 10% of net on component sales (the flat €500 per sale stays for the legacy plans), plus €750 per agency onboarding. Public marketing landing at `/partners` (founder-led EN/DE, six sections incl. live active-partner count + FAQ); authenticated dashboard at `/partners/dashboard` for active partners (referral link, sales, balance, agency-upgrade form). New agency applications email `florian@fintery.com` (override via `PARTNER_ADMIN_NOTIFY_EMAIL`) so the operator can triage from the inbox without opening the admin UI.
 
 ### Stripe billing setup (one-time, per instance)
 
@@ -821,6 +836,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### September 2026: components sold on the pricing page
+
+The pricing page sells the six components (CRM, ERP, Signing, HR, Geo, Calendar) bought or hosted instead of three CRM plans. The catalogue lives in `backend/catalogue_core.py` (prices, SKUs, order building, licence spec encoding, maintenance and commission rules, no side effects) and the frontend mirrors it for the configurator. Stripe holds twenty prices (six bought, six per seat monthly, six per seat yearly, instance fee monthly and yearly) found at runtime by `metadata.tako_sku`, created by `scripts/admin/create_tako_stripe_products.py` and cached in `platform_settings.stripe_prices`. `POST /api/checkout/components` takes `{mode, components, seats, interval, currency, origin_url, consent, referral_code}` signed in or as a guest: bought is a payment session with one Price line per component, hosted is a subscription with the instance fee plus one per-seat line per component (3 to 500 seats). Webhook fulfilment: a bought spec merges its components into the org's licence document (a second purchase adds to the first, the maintenance clock is not reset); a hosted purchase is a provisioning order recorded as `hosted_purchases` on the org with a mail to the operator, and it never unlocks the download or caps seats on a platform org. Refunds of a components transaction revoke the refunded components unless another paid purchase still grants them, and a partial refund keeps the org's licence: only when nothing paid remains does the org become refunded. Partner commission on component sales is 10% of net; the flat €500 stays for the legacy plans. Maintenance renewal charges 12% of the purchased licence value (the bought prices of the components on the org's paid, unrefunded purchases; hosted purchases contribute nothing), minimum €999; legacy orgs keep the flat €999. The pricing configurator previews bought total, maintenance, hosted price per period and the three-year comparison with the crossover user count (14 users for all components, 12 for CRM alone). The three legacy plans keep working for existing customers and renewals but left the page. Deploy order: run the Stripe products script with `--apply` (the `setup-stripe-products.yml` workflow) before the backend deploy or every component checkout fails on the missing SKU, keep Stripe Tax on for the multi-line sessions, and set the Terms of Service URL in the Stripe dashboard so guest consent collection is accepted.
 
 ### September 2026: legacy grant fields retired, customer builds carry the licence map
 
