@@ -395,6 +395,16 @@ ENVIRONMENT=production
 
 # Distribution output dir (platform-only — stripped from customer builds)
 DISTRIBUTION_DIR=./dist
+
+# Component deployment switches. Each is a kill switch only: the
+# organisation also needs the matching licence grant (Admin licence
+# editor, or Settings, Components where self serve is allowed) before
+# the component actually turns on.
+TAKO_ERP_ENABLED=
+TAKO_INVOICING_ENABLED=
+TAKO_SIGNING_ENABLED=
+TAKO_HR_ENABLED=
+TAKO_GEO_ENABLED=
 ```
 
 **Frontend** (`/frontend/.env`):
@@ -836,6 +846,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### September 2026: ERP skeleton with numbering, PDF and catalogue
+
+`backend/erp/` is a new isolated package, mirroring `backend/geo/` and `backend/hr/`: a bind factory wires `/api/erp` against injected auth, org resolution, the database and the admin role check, `ensure_erp_indexes` runs in the startup index loop, and every rule lives in a pure `*_core` module (`money_core`, `numbering_core`, `fiscal_core`, `catalog_core`) that imports neither Mongo nor FastAPI. Money is integer cents in `*_cents` keys only, and `money_core.cents_from_str` rounds half up at the cent with Decimal, never a float. Two gates guard the router, both fail closed with 402 `erp_not_enabled`: the settings and catalogue routes (units, tax rates, products, price lists) answer when either ERP proper or the free Invoicing component is switched on and granted, because an invoice needs a legal sender and a catalogue too; everything else, today the PDF preview, needs ERP proper. Mutating routes carry a separate writer gate: owner, admin, `erp_manager` or a platform admin, and `erp_manager` is now assignable both on invites and on a member's role change. GoBD numbering keeps a gap free, sequential counter per organisation, document kind and fiscal year in `erp_number_ranges`, drawn atomically with one `find_one_and_update` after validation and before the insert; the format is `RE-2026-00001` for a dated document, `ART-00001` for a product, which carries no year because it is an article id, not a bookkeeping sequence, and a kind's prefix is configurable until the first number of that kind is drawn. Fiscal settings sit on `org.erp_fiscal`: legal name, address, VAT id, tax number, IBAN with a mod 97 check, BIC, fiscal year start month, currency (EUR, CHF or GBP), the per-kind number prefixes, an invoice footer and a small business flag. The catalogue seeds units and the German tax rates on first use, carries products with net list and cost prices in cents, and price lists with quantity breaks and validity dates, resolving through `GET /api/erp/products/{id}/price`. `POST /api/erp/pdf/preview` renders Jinja2 templates with WeasyPrint against the organisation's letterhead, refuses external resources, runs off the event loop in a thread and is capped at 30 previews per organisation per minute; the backend image gains an apt layer for pango, harfbuzz and DejaVu, and the customer bundle ships that same Dockerfile. The frontend adds `/erp` (Products, the product record and ERP settings) under a new Business nav section. Not in this release: quotes, orders, invoices, XRechnung and DATEV (plan 4).
 
 ### September 2026: components sold on the pricing page
 
