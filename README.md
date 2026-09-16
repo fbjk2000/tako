@@ -847,6 +847,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: deleting a message from the Inbox detail pane works again
+
+The Delete button in the message header on `/inbox` answered "Email not found" for every message. The row-level trash icon (May 2026) gave the delete handler an optional `row` argument, and the header button was still wired as `onClick={handleDeleteOpen}`, so React handed it the click event; the event won the `row || detail` fallback and the request went out as `DELETE /api/email/undefined`, which the backend correctly rejected with 404. The header now calls the handler with no argument, and the handler only accepts an argument that carries an `email_id`, so a stray event can never be mistaken for a row again. `frontend/src/pages/email/InboxPage.delete.test.jsx` pins both entry points: the header button deletes the open message, and the hover trash icon on a list row deletes that row (that icon was never affected).
+
 ### September 2026: the first pipeline of a workspace can be saved again
 
 Settings, Pipelines, Save silently hung on every workspace that had never configured a pipeline: the button greyed out, nothing arrived, and the Deals page kept showing the built-in default. Two defects sat on that path. `POST /api/organizations/pipelines` demoted "the other defaults" with a positional-all update (`pipelines.$[].is_default`) even when the document had no `pipelines` field yet, which Mongo refuses ("The path 'pipelines' must exist in the document"), so the very first pipeline could never be written. The demote now only runs when a pipeline already exists. Independently, `demo_write_block_middleware` wrapped `call_next()` inside its try/except: a handler exception on any write request was swallowed as "failed open" and the request was dispatched a second time on an already-consumed body, so the client never got an answer (nginx logged 499, uvicorn nothing). The middleware now decides first and dispatches once, outside the try, so a handler failure surfaces as a 500 instead of a hang.
