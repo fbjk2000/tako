@@ -847,6 +847,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: Mark done on the Dashboard focus card works
+
+The Today's focus card is mounted twice: on `/tasks`, where the page hands it an `onComplete` handler that flips the Pulse list optimistically and refreshes the nav counts, and on `/dashboard` on its own. The card's Mark done button only ever called that handler, so on the Dashboard a click did nothing: no request, no error, the task stayed. `FocusCard` now completes the task itself when no handler is passed (`POST /api/tasks/:id/complete`, then a reload of the ranking, which only returns still-open tasks, so the next ranked task promotes into the top 3) and surfaces a failure in the card's own error line. With a handler it still delegates and never posts on its own, so the Tasks page keeps its flow. `frontend/src/pages/tasks/FocusCard.test.jsx` pins both.
+
 ### September 2026: deleting a message from the Inbox detail pane works again
 
 The Delete button in the message header on `/inbox` answered "Email not found" for every message. The row-level trash icon (May 2026) gave the delete handler an optional `row` argument, and the header button was still wired as `onClick={handleDeleteOpen}`, so React handed it the click event; the event won the `row || detail` fallback and the request went out as `DELETE /api/email/undefined`, which the backend correctly rejected with 404. The header now calls the handler with no argument, and the handler only accepts an argument that carries an `email_id`, so a stray event can never be mistaken for a row again. `frontend/src/pages/email/InboxPage.delete.test.jsx` pins both entry points: the header button deletes the open message, and the hover trash icon on a list row deletes that row (that icon was never affected).
