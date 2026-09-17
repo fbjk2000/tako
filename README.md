@@ -847,6 +847,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: tag picker suggestions clickable inside dialogs, typed tag survives Apply
+
+Bulk edit on Leads could not add a tag: an operator selected 319 imported leads, typed the tag in the Tags field, and Apply answered "nothing to apply" (or the dialog closed). The suggestions menu of `TagInput` is portaled to `<body>`, and a modal Radix Dialog sets `pointer-events: none` on `<body>` while it is open, opting only its own layer back in. `pointer-events` inherits, so every mouse click on a suggestion or the "Create …" row fell straight through the menu onto whatever sat underneath. Only keyboard commits (Enter, comma) worked, which is why the tests never noticed. The same gap sat under Add lead, Lead edit and the contact and deal dialogs. The menu now sets `pointer-events: auto`, and text still typed when focus leaves the field is committed as a tag, so typing a tag and clicking Apply or Save no longer drops it. Covered by TagInput tests (pointer-events invariant, blur commit) and an end-to-end BulkEditDialog test that replays the failing path with real focus movement. PR #301.
+
 ### September 2026: every member can add products
 
 A sales rep who opened New product on Business, Products saw "The product could not be created": `POST /api/erp/products` carried the ERP writer gate (owner, admin, `erp_manager`), so a member's create answered 403 `erp_writer_required`, and so did edit and archive. The catalogue is the sales team's tool, not the fiscal side, and a rep pricing a deal has to be able to add the item they are selling without waiting for an admin. Create, edit and archive on products now run for any member of the organisation; settings, units, tax rates, price lists, quotes, invoices and exports keep the writer gate. The archive stays a soft delete with the number reserved, so a mistaken archive by a rep is recoverable by an operator. No new env vars, no migration.
