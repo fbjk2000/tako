@@ -847,6 +847,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: the FOCUS menu on /tasks changes what is on screen
+
+"The task menu (Daily, weekly, etc.) does not change the view." The Today / Overdue / This week / Later / No due date list filters the Pulse view and nothing else, so picked from the Constellation or Calendar tab it changed the URL and the counts and left the screen as it was; "Later" filtered down to a bucket that ships collapsed, so one folded row and nothing else; a bucket the backend omits because it is empty rendered a blank body with no way back; and the header kept counting the unfiltered list. Now a pick brings Pulse back, the picked bucket is always open, an empty bucket says "Nothing in Later right now" with a Show all button, and the header count follows the selection. Tests: `frontend/src/pages/tasks/TasksPage.test.jsx` (+3).
+
 ### September 2026: the products table on a deal fits its column
 
 The Products card on `/deals/:id` drew its lines as one six-column grid with 448px of fixed columns. The card sits in the two-fifths column of the record page (about 425px of content on a 1440px window) and in the 512px create dialog, so the flexible name column collapsed to zero width and the article number ran over the quantity box. Each line is now two rows: the name row (number, name, line total, remove) and the figures row (qty, unit x unit price), which fits any container width without a viewport breakpoint. The total sits in the name row, under the footer total, because the app's 20px root font makes the figures row alone 372px wide. Test: `frontend/src/components/DealLineItemsEditor.test.jsx` (7).
