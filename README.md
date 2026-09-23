@@ -847,6 +847,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: the products table on a deal fits its column
+
+The Products card on `/deals/:id` drew its lines as one six-column grid with 448px of fixed columns. The card sits in the two-fifths column of the record page (about 425px of content on a 1440px window) and in the 512px create dialog, so the flexible name column collapsed to zero width and the article number ran over the quantity box. Each line is now two rows: the name row (number, name, remove) and the figures row (qty, unit x unit price, total right-aligned), which fits any container width without a viewport breakpoint. Test: `frontend/src/components/DealLineItemsEditor.test.jsx` (7).
+
 ### September 2026: sent mail reaches the mailbox's real Sent folder, and Work Mode notes show their text
 
 Every send from an IONOS mailbox logged `IMAP APPEND failed ... folder=Sent`. The server's answer was `[TRYCREATE] folder does not exist`: IONOS files sent mail in "Gesendete Objekte" and flags it `\Sent` (RFC 6154), while the account row carried the default "Sent". `detect_sent_folder` probed a fixed list of names and never read the flag, so four of five connected IONOS mailboxes had a Sent folder that did not exist and no mail sent through TAKO ever appeared in their Sent view. The detector now takes the folder the server flags as `\Sent` first and falls back to the known names ("Gesendete Objekte" among them), and the send path recovers on its own: a refused APPEND asks the server for its Sent folder, copies the mail there, and remembers it on the account row, so the next send goes straight in. The Outbox retry shares the same path. The five affected rows in production were corrected by hand the same day.
