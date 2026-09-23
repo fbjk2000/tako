@@ -849,7 +849,7 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ### September 2026: the products table on a deal fits its column
 
-The Products card on `/deals/:id` drew its lines as one six-column grid with 448px of fixed columns. The card sits in the two-fifths column of the record page (about 425px of content on a 1440px window) and in the 512px create dialog, so the flexible name column collapsed to zero width and the article number ran over the quantity box. Each line is now two rows: the name row (number, name, remove) and the figures row (qty, unit x unit price, total right-aligned), which fits any container width without a viewport breakpoint. Test: `frontend/src/components/DealLineItemsEditor.test.jsx` (7).
+The Products card on `/deals/:id` drew its lines as one six-column grid with 448px of fixed columns. The card sits in the two-fifths column of the record page (about 425px of content on a 1440px window) and in the 512px create dialog, so the flexible name column collapsed to zero width and the article number ran over the quantity box. Each line is now two rows: the name row (number, name, line total, remove) and the figures row (qty, unit x unit price), which fits any container width without a viewport breakpoint. The total sits in the name row, under the footer total, because the app's 20px root font makes the figures row alone 372px wide. Test: `frontend/src/components/DealLineItemsEditor.test.jsx` (7).
 
 ### September 2026: sent mail reaches the mailbox's real Sent folder, and Work Mode notes show their text
 
