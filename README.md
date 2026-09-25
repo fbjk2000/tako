@@ -847,6 +847,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 ## Recent Updates (Apr–Jun 2026)
 
+### September 2026: a plain Send Email on the lead record
+
+"Could we add a send email button inside the leads? Without passing through AI." The lead record's only mail action was Draft Email, which ran the lead through the AI composer before a compose window ever opened; contacts, deals and companies had a plain compose all along. The lead action row now carries the same `ComposeEmailButton`, labelled Send Email, linked to the lead and prefilled with its address, so a send from it takes the ordinary path: the `email_links` row puts the mail on the lead's History, the touch ledger gets its `mail_send` row, and a new lead flips to contacted. The AI path stays next to it as AI Draft. Backend untouched. Test: `frontend/src/pages/RecordPage.leadactions.test.jsx` (+1 assertion block).
+
 ### September 2026: mail sent from Outlook or the phone counts
 
 The poller read INBOX and nothing else, for every mailbox, so a mail a rep sent from Outlook or the phone never entered TAKO: the lead stayed "new", the History stayed blank, the touch ledger never heard of it and no follow-up got dated. The poller now runs a second pass over the account's Sent folder (`mail/sent_sync.py`, its own high-water mark `last_synced_uid_sent`) and gives each new sent mail everything a TAKO send gets: the outbound row, the recipient match, the `email_links` row, the new→contacted advance, the `mail_send` touch and the org-gated follow-up. The copy of a mail sent through TAKO is recognised by its Message-ID and attributed nothing twice. The first pass on an account only records where the folder stands; history is `scripts/backfill_sent_folder.py --account … --since …` (dry-run first). `scripts/backfill_send_touches.py --org … --since …` writes the touch rows and the missing follow-ups for mail already sent through TAKO before #308. Tests: `backend/tests/test_sent_sync.py` (6).
