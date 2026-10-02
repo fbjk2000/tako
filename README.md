@@ -759,10 +759,10 @@ These endpoints power the marketing site and are public — auth is the absence 
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET/POST | `/api/v1/chat/channels` | List / create |
-| GET | `/api/v1/chat/channels/{id}` | Get channel by ID or slug |
-| GET | `/api/v1/chat/messages/{channel_id}` | Poll messages (`since`, `before`, `limit`) |
-| POST | `/api/v1/chat/messages` | Post message. Body supports `sender_id` for multi-agent attribution (must be a user in your org; cross-org sender_id is rejected with 400). `sender_name` is the display label |
+| GET/POST | `/api/v1/chat/channels` | List / create. The list holds the channels the key owner may read in the app: no DM or private channel of other people. A DM (`channel_type: "direct"`) cannot be created here |
+| GET | `/api/v1/chat/channels/{id}` | Get channel by ID or name. A channel the key owner may not read answers 404, like one that does not exist |
+| GET | `/api/v1/chat/messages/{channel_id}` | Poll messages (`since`, `before`, `limit` up to 500). Same read rule as the list |
+| POST | `/api/v1/chat/messages` | Post message. Needs write access to the channel (403 where the key owner can read but not post) and always posts as the API key's owner; `sender_id` in the body is ignored. `sender_name` is the display label and is signed with the owner's name ("Deploy Bot (via Rep Miller)"). An agent that needs its own identity gets its own user and its own key |
 | POST | `/api/v1/capture` | Business card capture (multipart upload) |
 | POST | `/api/v1/notion/sync` | Sync entity to Notion |
 | GET | `/api/v1/docs` | API self-documentation |
@@ -778,14 +778,13 @@ GET  /api/v1/campaigns/{id}/recipients                # poll delivery
 ```
 
 ```http
-# Multi-agent attribution example
+# Posting as an agent: the key's owner is the sender, the chat shows "Maestro (PM) (via <owner>)"
 POST /api/v1/chat/messages
 Authorization: Bearer tako_...
 
 {
   "channel_id": "general",
   "content": "Booked a demo with @Jane",
-  "sender_id": "user_0002f4c76a58",
   "sender_name": "Maestro (PM)"
 }
 ```
@@ -846,6 +845,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### October 2026: access gaps closed after the team access audit
+
+The read-only audit of 1 October that prepared the team access lock also listed gaps the lock does not cover. They are closed here, each in its own commit with a test that failed first. TAKO's own marketing data is the platform operator's: the lead-magnet signups, the Kit.com subscriber and broadcast lists and creating Kit tags or broadcasts need a super admin, where any signed-in user of any workspace could read the lists and any workspace admin could create a broadcast; the Campaigns page no longer asks for the subscriber count on behalf of anyone else. `/v1` chat follows the rule of the chat in the app: an API key lists and reads only the channels its owner may read (a DM or private channel of other people answers 404, like a channel that does not exist), one call returns at most 500 messages, a post needs write access to the channel and always goes out as the key's owner (`sender_id` is ignored), the label a key sends is shown signed with its owner ("Deploy Bot (via Rep Miller)"), and a DM cannot be created through the API. `GET /calls` returns at most 500 rows. Hiring outreach stays behind the HR fence on `GET /v1/campaigns`, its recipients and its replies, and in the connector's recipient and reply tools; candidate CVs, employee documents and hiring attachments in the file store are listed and downloadable for HR roles only, on `/files`, `/v1/files` and the connector's file list. Listing and downloading a DATEV export needs the ERP writer role like creating one, and the Exports page says so to a member instead of failing to load. The member list returns five fields (`user_id`, `name`, `email`, `picture`, `role`) instead of the user document minus the password hash, which had carried `email_verification_token` to every colleague. `/v1/tasks` leaves other people's private tasks out of the list and answers 404 on reading or changing one. The two public booking routes (calendar file, cancellation) trusted a bare booking id and now need a signed guest link; nothing links to them today. What an integration may notice: a key that posted into a channel its owner is not a member of gets 403 until the owner is added, a key that sent `sender_id` now posts as its owner, and its label carries the owner's name. Tests: 60 new backend tests (suite 4196), 9 new frontend tests (suite 1007).
 
 ### September 2026: groundwork for one Contacts list (Leads retire next)
 
