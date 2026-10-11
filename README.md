@@ -284,10 +284,9 @@ Per-client frontend variants: put whole-file overrides under `clients/<name>/ove
 
 ### Release workflow
 
-1. Bump the version in `backend/server.py` (`TAKO_VERSION`) and commit.
-2. `git tag vX.Y.Z && git push --tags`.
-3. `.github/workflows/release.yml` runs: builds the tarball, computes SHA-256, creates the GitHub Release with both artifacts attached, and POSTs to `/api/admin/releases/notify` (super-admin key) so `/api/releases` and `/changelog` pick it up immediately.
-4. Customer instances hit `/api/system/update-check` on their next daily tick, see the new version, and surface a banner linking to `/download` with a fresh signed token from `POST /api/license/download`.
+1. `git tag vX.Y.Z && git push --tags`.
+2. `.github/workflows/release.yml` runs: builds the tarball, computes SHA-256, creates the GitHub Release with both artifacts attached, and records the release on the running instance over the deploy SSH path (`scripts/ops/release-notify.sh` runs `python -m release_notify` inside the backend container with the generated release notes as the changelog and `--no-notify`, the same writes as `/api/admin/releases/notify`, so no API token is needed) so `/api/releases` and `/changelog` pick it up immediately. A tag push emails nobody: emailing the customers whose maintenance is active is Florian's decision, and runs only from the Actions tab (Run workflow on an existing tag with notify ticked).
+3. Customer instances hit `/api/system/update-check` on their next daily tick, see the new version, and surface a banner linking to `/download` with a fresh signed token from `POST /api/license/download`.
 
 ---
 
