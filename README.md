@@ -118,7 +118,7 @@
   1. **`/demo` (public marketing page)** — intent-capture landing for cold traffic. Primary CTA books a 15-minute walkthrough with the operator via the native booking page; secondary "notify me when the sandbox is live" email-capture posts to `POST /api/newsletter` with `source: 'demo_page'`. Cold prospects always land somewhere useful instead of a generic signup form.
   2. **Trial org spin-up (post-signup)** — after standard signup + email verification, `SetupOrgPage` offers "Try TAKO free for 14 days" which calls `POST /api/demo/create` and seeds a fresh org with sample leads, deals, tasks, and calendar events. On expiry the tenant soft-locks: reads stay open, writes are blocked middleware-wide until the user upgrades. Super admins can extend, expire, or purge demos from the admin panel.
 - **Distribution System** — `scripts/build-distribution.sh` produces a self-contained customer tarball (source + Docker + customer `.env.example` + install guide + backup script). Platform-only code — UNYT/crypto, self-serve demo, partner payouts, super-admin UI, distribution tooling — is stripped via sentinel-wrapped regions (`DEMO_BEGIN`/`PLATFORM_BEGIN` markers) so customers never see it.
-- **Release Pipeline** — Tagging `vX.Y.Z` on `main` runs `.github/workflows/release.yml`, which builds the distribution tarball, generates SHA-256 checksums, creates a GitHub Release, and posts a notification to `/api/admin/releases/notify` so the changelog and in-app update checker update automatically.
+- **Release Pipeline**: Tagging `vX.Y.Z` on `main` runs `.github/workflows/release.yml`, which builds the distribution tarball, generates SHA-256 checksums, creates a GitHub Release, and records the release on the running instance over the deploy SSH path (`scripts/ops/release-notify.sh` runs `python -m release_notify` inside the backend container with `--no-notify`) so the changelog and in-app update checker update automatically. Emailing the customers whose maintenance is active is a separate Run workflow on an existing tag with notify ticked.
 - **In-app Update Checker** — Customer instances call `/api/system/update-check` once per day against the platform; if a newer version is tagged, a banner appears in the admin UI linking to the changelog and download page. Results are cached per-org for 24h to stay polite.
 - **Cron Health Watchdog** — APScheduler event listeners stamp every job's last run into `db.job_runs_latest` (status / timestamp / truncated traceback / consecutive-error streak). A 5-minute `cron_health_watchdog` job checks two signals — `next_run_time` >10 min stale (scheduler wedged) or `consecutive_errors >= 3` (job failing every cycle) — and bell-pings every super-admin with a `job_health_alert` notification. 1-hour dedup per `job_id`. `GET /api/admin/jobs/health` returns per-job status for ad-hoc inspection.
 - **GDPR Compliance** — Self-service data export (`/api/gdpr/export-my-data`), account deletion with grace period (`/api/gdpr/request-deletion` / `/api/gdpr/cancel-deletion`), and a public DPA endpoint at `/api/legal/dpa`.
@@ -145,15 +145,16 @@ TAKO ships with a defense-in-depth posture suitable for production use by Europe
 - **Session termination on org deletion** — When an organization is deleted, all associated sessions are revoked and users are force-logged-out on next request.
 - **VAT-aware invoicing** — `COMPANY_VAT_NUMBER` is emitted on every invoice; missing VAT keeps the obvious placeholder `GB000000000` so no invoice silently ships without one.
 - **Tenant isolation** — All CRM queries scope to the caller's `organization_id`; cross-tenant access is not possible via the REST or v1 external API.
+- **Secrets at rest.** OAuth tokens are encrypted on write (`backend/oauth/__init__.py`); the BYO keys in `db.org_integrations` are plaintext, tracked as issue #352 (prio:next).
 
-See [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) for the host-level companion guide (unprivileged deploy user, SSH key-only auth, UFW, fail2ban, automatic security updates, MongoDB bind-address).
+See [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) for the host-level companion guide (unprivileged deploy user, SSH key-only auth, UFW, MongoDB bind-address).
 
 ---
 
 ## Operations
 
 - **Health check** — `GET /api/health` returns a JSON status payload covering MongoDB reachability, email sender readiness, Sentry init, and **Stripe + Resend webhook configuration**. Returns **200** when MongoDB is reachable, **503** when it is not — use it as the target for an external uptime monitor. Sample response: `{"status":"ok","mongo":"connected","email":"configured","sentry":"disabled","stripe_webhooks":"not_configured","resend_webhooks":"configured"}`.
-- **Error monitoring** — Set `SENTRY_DSN` (backend `.env`) and `REACT_APP_SENTRY_DSN` (frontend build env) to enable Sentry. Both are optional soft dependencies — the backend and frontend start without error if the SDK isn't installed or the DSN isn't set. `ENVIRONMENT` / `REACT_APP_ENVIRONMENT` tag events so staging and prod don't pollute each other.
+- **Error monitoring**: Set `SENTRY_DSN` (backend `.env`) and `REACT_APP_SENTRY_DSN` (frontend build env) to enable Sentry. Both are optional soft dependencies — the backend and frontend start without error if the SDK isn't installed or the DSN isn't set. `ENVIRONMENT` / `REACT_APP_ENVIRONMENT` tag events so staging and prod don't pollute each other. Sentry: SDK pin and DSN in phase 2 of the CTO programme (issue #377).
 - **Backups** — `scripts/backup-mongo.sh` dumps MongoDB, tars the output, retains 7 days locally, **and uploads offsite** when configured. Two offsite paths:
   - **S3-compatible** (AWS, MinIO, Wasabi, Backblaze B2, Cloudflare R2): set `BACKUP_S3_BUCKET`, `BACKUP_S3_PREFIX` (optional), `BACKUP_S3_ENDPOINT` (optional, for non-AWS), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`. Requires the `aws` CLI on the host.
   - **rclone** (Dropbox, Google Drive, etc.): set `BACKUP_RCLONE_REMOTE=dropbox:tako-backups` (or any configured rclone remote). Requires `rclone` on the host.
@@ -170,8 +171,8 @@ See [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) for the host-level companio
   - **`verify-campaign-runner.yml`** — APScheduler health probe; reads `db.apscheduler_jobs` for next-run-time + last 5 `db.agent_runs` rows. Optional `fire_now=true` to trigger `run_daily_campaigns()` once.
   - **`smoke-probe.yml`** — generic ops probe: paste a Python snippet, runs inside the prod backend container with `from server import db` in scope. Used for one-off "did the row land?" checks.
   - **`rotate-stripe-key.yml`**, **`set-vps-secret.yml`**, **`env-cleanup-malformed.yml`** — operational hygiene utilities.
-- **Support tickets** — Users submit issues from any page via `POST /api/support/ticket`; tickets land in the super-admin panel with user, org, and environment metadata auto-attached. Public (unauthenticated) contact enquiries go through `POST /api/support/contact`.
-- **Host hardening** — [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) walks through IONOS/VPS first-boot steps: unprivileged deploy user, SSH key-only auth, UFW, fail2ban, unattended-upgrades, MongoDB bound to localhost.
+- **Support tickets**: Users submit issues from any page via `POST /api/support/ticket`; tickets land in `db.support_tickets` with a `TAKO-NNNNNN` id and the user, org and environment metadata attached, ring a bell for every platform admin and roll into the hourly support intake message; the CTO lens support queue lists them for platform admins (phase 1 of the CTO programme, #338). Public (unauthenticated) contact enquiries go through `POST /api/support/contact`.
+- **Host hardening**: [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) walks through IONOS/VPS first-boot steps: unprivileged deploy user, SSH key-only auth, UFW, MongoDB bound to localhost.
 - **Campaign operating artifacts** — Per-campaign durable knowledge (reusable copy, source-list notes, batch logs, lessons learned) lives at [`docs/campaigns/`](docs/campaigns/). One folder per campaign (e.g. `campaign-1-aios-investor-dd/`). Stored close to TAKO execution truth so deliverability fixes, suppression rules, and angle iterations stay close to the code that runs them.
 
 ---
@@ -665,7 +666,7 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 | GET | `/api/version/latest` | Latest tagged version (public, no auth) |
 | GET | `/api/version/check` | Per-caller version comparison (`current` vs `latest`, `update_available` flag) |
 | GET | `/api/releases` | Last 20 releases, newest first (public — powers `/changelog`) |
-| POST | `/api/admin/releases/notify` | Platform-only. Called by the release workflow after a tag is published |
+| POST | `/api/admin/releases/notify` | Platform-only. Records a release and emails the customers whose maintenance is active; the release workflow performs the same writes over SSH with `python -m release_notify` |
 | GET | `/api/system/update-check` | Customer instance → platform daily check; 24h per-org cache |
 
 ### Public surfaces (no auth)
@@ -839,7 +840,7 @@ server {
 }
 ```
 
-For host hardening, backups, health checks, and error monitoring details, see [Security](#security) and [Operations](#operations) above. For VPS-level steps (deploy user, SSH, UFW, fail2ban, MongoDB bind), see [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md).
+For host hardening, backups, health checks, and error monitoring details, see [Security](#security) and [Operations](#operations) above. For VPS-level steps (deploy user, SSH, UFW, MongoDB bind), see [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md).
 
 ---
 
@@ -1885,7 +1886,7 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 - **GDPR endpoints** — Self-service data export, account deletion with grace period, and a public DPA endpoint at `/api/legal/dpa`.
 - **Distribution system** — `scripts/build-distribution.sh` produces a clean customer tarball with platform-only code stripped via `DEMO_BEGIN`/`PLATFORM_BEGIN` sentinel regions. Output lands in `DISTRIBUTION_DIR` (`./dist` by default).
 - **Self-serve demo** — Landing-page `/demo` spins up a seeded 14-day trial org. APScheduler runs daily expiry; expired tenants soft-lock via middleware (writes blocked, reads open). Super admins extend/expire/purge from the admin panel.
-- **Release pipeline** — `.github/workflows/release.yml` builds the tarball, attaches SHA-256, creates the GitHub Release, and calls `/api/admin/releases/notify` so `/changelog` and the update banner pick up new versions automatically.
+- **Release pipeline**: `.github/workflows/release.yml` builds the tarball, attaches SHA-256, creates the GitHub Release, and records the release on the running instance (at first by calling `/api/admin/releases/notify`; since 11 October 2026 over the deploy SSH path with `python -m release_notify`) so `/changelog` and the update banner pick up new versions automatically.
 - **Customer update checker** — `/api/system/update-check` runs once per day from each customer instance with a 24h per-org cache; admins see a banner linking to `/changelog` and a fresh signed download token from `POST /api/license/download` when a newer version ships.
 
 ### Apr 2026 — Pre-launch QA highlights
@@ -1905,66 +1906,9 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 
 ## Pending / Roadmap
 
-### Custom Fields — v3
-| Item | Status |
-|------|--------|
-| Column visibility for custom fields on list views | v2 ships filtering; column toggle is a separate UI surface |
-| Required-field enforcement | Backend validation gate + frontend asterisk + submit-disable |
-| Number / date / boolean / multi-select field types | v1/v2 ship text + dropdown only |
-| Backend-side filtering for very large lists | Client-side AND-filter today; backend `?cf:<key>=value` query support if a partner hits a perf wall |
-
-### TAKO Mail — Phase 2 / 3 / 4
-| Item | Status |
-|------|--------|
-| Multi-folder support (Sent / Junk / Archive / custom) | Phase 1 watches INBOX only; closes the "All Mail vs INBOX" gap vs Apple Mail |
-| All-accounts merged inbox view | Today: switch via left rail. Phase 2: interleave |
-| Bulk delete (multi-select in centre list) | Phase 2 |
-| Trash recovery surface for soft-deleted emails | Soft-delete flag is on every row; needs a `/trash`-style listing + restore |
-| "Load more" / pagination on inbox | Cold-start caps at 200 newest UIDs |
-| `ai_intent` classification on inbound | Schema field reserved; Sentinel slice in Phase 2 |
-| Re-summarise on language change | Existing summaries stay in the language they were generated in |
-| Sentinel skip for known-sender auto-replies | OOO from a known contact still pings the bell today |
-| Bell-ping fan-out to all admins on shared mailboxes | Currently goes to org owner only |
-| Real UserPicker for the Assign-to action on shared mailboxes | `window.prompt` today; UserPicker component exists, just not wired |
-| Mark-done UX for shared-mailbox assignees | i18n key reserved; backend endpoint not shipped |
-| Activity-feed delete semantics split (inbox vs everywhere) | Today: soft-delete hides from both. Phase 2 if needed |
-| Cross-device draft sync | Compose drafts are device-local localStorage today |
-| Reply-all + scheduled send | Phase 2 niceties |
-| Attachment binaries → TAKO Files bridge | Metadata surfaces today; binary download requires opening in your real client |
-| OAuth (Sign in with Google / Microsoft) + push delivery | Phase 3 — Gmail Pub/Sub + Microsoft Graph webhooks replace 30s polling |
-| Atlas localisation pass | Phase 4 — full i18n for the email surface, locale-aware date/time |
-
-### Phase B — Smart task prioritisation follow-ups
-| Item | Status |
-|------|--------|
-| Per-task priority badge + override + reason chip on each row | Phase B.2 |
-| "Start focus session" walkthrough that opens the top 3 one at a time | Phase B.2 |
-| Private Chores integration (toggle currently greyed out) | Schema-side ready; depends on the separate Private Chores project shipping |
-| Prompt tuning loop based on operator-flagged ranking surprises | Ongoing |
-
-### Pre-existing
-| Item | Status |
-|------|--------|
-| Encrypt the BYO Anthropic key in `db.org_integrations` | Plaintext today; should use the same `mail.crypto` helper |
-| Backend tests in CI | 60+ email-module tests + the existing suites run locally only; deploy-backend.yml smoke-tests `/api/health` only |
-| `max_users` per-org seat cap enforcement | Legacy field exists on the model; not enforced |
-| Roll out `<SearchableSelect>` to other long-list dropdowns | Add-to-Campaign, etc. |
-| Chrome extension (`tako-chrome-extension`) | Not started — backend pairing ready |
-| OAuth token encryption at rest | Not done — required before production Meta OAuth |
-| Meta app review (Page Public Content Access) | Not submitted — start early, takes weeks |
-| Instagram / LinkedIn Listeners | Backend channel stubs ready, poller not wired |
-| Settings → Meta OAuth connect button (frontend) | Not done |
-| Stripe / Twilio webhook consolidation into generic receiver | Not done |
-| Chat Phase B — file sharing + CRM record sharing inside chat | Backend `attachments` field ready; upload pipeline + record picker pending |
-| Chat Phase C — PWA push notifications | Service worker + VAPID + permission UX pending |
-| Chat Phase D — auto-task detection from chat | LLM pass over `chat_audit` ranges with moderator approval |
-| Refresh tokens → httponly cookies | XSS hardening; localStorage today |
-| Per-recipient HTML snapshot when personalization lands | Currently every recipient of a campaign gets the same body |
-| Per-field changelog on entities | History timeline shows coarse "updated_at" today |
-| Companies House (UK) integration | Free API, half-day of work; layer on top of LLM lookup |
-| LinkedIn / data-broker enrichment (Apollo, Clearbit, etc.) | Paid; only when needed |
-| Sentry activation | DSN registration pending operator action (Stripe webhook now live) |
-| DPA legal text for `/api/legal/dpa` | Awaiting counsel review |
+Reconciled on 11 October 2026.
+The engineering backlog is GitHub Issues (labels `type`, `area`, `prio`, `status`; milestone `Now`).
+Rows that had shipped were dropped with the evidence in the commit body; everything else is an open issue.
 
 ---
 
