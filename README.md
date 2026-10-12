@@ -1908,6 +1908,7 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 
 Reconciled on 11 October 2026.
 The engineering backlog is GitHub Issues (labels `type`, `area`, `prio`, `status`; milestone `Now`).
+Two doors feed it since 12 October (issue #410): the GitHub issue forms (Bug report lands as `type:bug prio:next`, Enhancement request as `type:feature prio:later`; the CTO Routine triages both on its next weekday run) and, for customers and team members without a GitHub account, the support form inside TAKO, whose Bug, Improvement or Question choice sets the ticket's class and reaches the same backlog through the Routine.
 Rows that had shipped were dropped with the evidence in the commit body; everything else is an open issue.
 
 ---
