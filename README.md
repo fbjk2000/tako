@@ -143,7 +143,7 @@ TAKO ships with a defense-in-depth posture suitable for production use by Europe
 - **Stripe webhook hardening** — `/api/webhook/stripe` verifies the `Stripe-Signature` header against `STRIPE_WEBHOOK_SECRET` and de-duplicates events by `event.id` so retries are safe.
 - **Invoice XSS hardening** — HTML invoices escape every user-controlled field before rendering; no template injection surface.
 - **Session termination on org deletion** — When an organization is deleted, all associated sessions are revoked and users are force-logged-out on next request.
-- **VAT-aware invoicing** — `COMPANY_VAT_NUMBER` is emitted on every invoice; missing VAT keeps the obvious placeholder `GB000000000` so no invoice silently ships without one.
+- **Sales invoice from the payment itself**: the invoice emailed after a checkout prints the net, tax and total the Stripe checkout session charged, never a rate of its own: no VAT line when Stripe collected no tax, the tax with its rate from Stripe's breakdown when it did. Its lines are the order (each component bought or hosted with seats and billing, a maintenance renewal, a legacy plan), and the email's licence note matches it (download, instance being set up, new maintenance date). `COMPANY_VAT_NUMBER` is printed only when it holds a real number; left blank, the invoice carries no seller VAT line instead of a placeholder. Once it is set, a zero tax sale to a buyer with a VAT ID is checked against Stripe's taxability reason, and a sale Stripe marks reverse charge carries a reverse charge note; have that note and any wording for sales outside the scope of UK VAT confirmed before setting it.
 - **Tenant isolation** — All CRM queries scope to the caller's `organization_id`; cross-tenant access is not possible via the REST or v1 external API.
 - **Secrets at rest.** OAuth tokens are encrypted on write (`backend/oauth/__init__.py`); the BYO keys in `db.org_integrations` are plaintext, tracked as issue #352 (prio:next).
 
@@ -358,9 +358,6 @@ ANTHROPIC_API_KEY=sk-ant-...
 #   python -c 'import secrets, base64; print(base64.b64encode(secrets.token_bytes(32)).decode())'
 # Full setup walkthrough: docs/email/PRODUCTION_SETUP.md
 TAKO_EMAIL_CRED_KEY=
-
-# Invoicing
-COMPANY_VAT_NUMBER=GB123456789
 ```
 
 **Optional** — set only the integrations you actually use:
@@ -380,6 +377,12 @@ TWILIO_PHONE_FROM=+44...
 # Social Listening (Facebook / Instagram)
 META_APP_ID=your_meta_app_id
 META_APP_SECRET=your_meta_app_secret
+
+# Invoicing: your seller VAT number on the sales invoice emailed after a
+# checkout. Leave it blank until you hold a real registration; blank prints
+# no VAT number line. Set, it also turns on the reverse charge note for
+# sales Stripe marks reverse charge: confirm that wording first.
+COMPANY_VAT_NUMBER=
 
 # Payments (only needed if you resell TAKO or accept Stripe payments)
 STRIPE_API_KEY=sk_live_...
