@@ -179,18 +179,17 @@ See [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) for the host-level companio
 
 ## Pricing
 
-TAKO is sold as six components, each of them bought once per instance or hosted per user per month. The same software either way; only the way you pay differs.
+The price list names five components (decision of 21 October 2026, issue #524). CRM, HR and Geo are sold self-serve, each bought once per instance or hosted per user per month, and Signing joins them the day it is switched on. ERP is sold by hand for now (a "talk to us" link on the pricing page, no price and no checkout) until orders and delivery notes give it real content. The Calendar is part of the CRM with no price of its own; every workspace has had it since September. The same software either way; only the way you pay differs.
 
 **Bought (one time, per instance, net)**
 
 | Component | Price |
 |-----------|-------|
-| CRM | €10,000 |
-| ERP | €15,000 |
-| Signing | €5,000 |
+| CRM, the Calendar included | €10,000 |
 | HR | €2,500 |
 | Geo | €2,500 |
-| Calendar | €2,500 |
+| Signing | €5,000, from the day it is switched on |
+| ERP | sold by hand, talk to us |
 
 Unlimited users on bought licences, source code included. Maintenance and support cost 12% of the purchased licence value per year (the bought prices of the components you paid for), minimum €999, and are optional: skip the renewal and your instance keeps running, you only stop receiving updates. The 30-day money-back guarantee applies to bought licences.
 
@@ -198,12 +197,11 @@ Unlimited users on bought licences, source code included. Maintenance and suppor
 
 | Component | Per user per month |
 |-----------|--------------------|
-| CRM | €25 |
-| ERP | €40 |
-| Signing | €12 |
+| CRM, the Calendar included | €25 |
 | HR | €8 |
 | Geo | €8 |
-| Calendar | €8 |
+| Signing | €12, from the day it is switched on |
+| ERP | sold by hand, talk to us |
 
 Plus €99 per month for the instance. Minimum 3 users; yearly prepay charges 10 months. You get a dedicated EU server with admin and server access, run by TAKO (updates, backups, monitoring). Stop any time and take the instance with you.
 
@@ -848,6 +846,10 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 ---
 
 ## Recent Updates (Apr–Jun 2026)
+
+### October 2026: the price list sells only what gives the buyer something
+
+Decision #524 (hand_sell, 21 October). The pricing page, the partner page, the landing comparison and the page descriptions change in all four website languages, and the checkout follows server side. `backend/catalogue_core.py` gains `SELF_SERVE` (CRM, Signing, HR, Geo), `HAND_SOLD` (ERP) and `INCLUDED_WITH_CRM` (Calendar), `on_sale_components()` and `self_serve_refusal()`: `POST /api/checkout/components` answers 400 with a plain sentence for ERP and the Calendar, and for Signing while `TAKO_SIGNING_ENABLED` is off, before anything is stored or sent to Stripe. `SELLABLE`, the price tables, the SKUs and the licence spec keep all six components, so an order already paid, its webhook, refund and maintenance renewal, and every existing entitlement work as before; Stripe products and prices are untouched. The new public `GET /api/catalogue` (and `on_sale_components` in `GET /api/partners/program-info`) says what is on sale; the pricing page and the partner page read it, and their prerendered copy shows Signing as not on sale yet, so a page that never reaches the backend never offers more than the checkout accepts. On the day Signing is switched on, the page offers it at €5,000 bought or €12 per user hosted without a code or copy change.
 
 ### October 2026: documents signed electronically, from an upload, a quote or an employee file
 
