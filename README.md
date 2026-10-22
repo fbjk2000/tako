@@ -517,12 +517,15 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 | POST | `/api/contacts` | Create |
 | GET/PUT/DELETE | `/api/contacts/{id}` | Read / update / delete (delete cascades into `campaign_recipients`) |
 | GET | `/api/contacts/tags` | All distinct tags |
-| POST | `/api/contacts/import-csv` | Import from CSV |
+| POST | `/api/contacts/import-csv` | Import from CSV. Form fields: `file`, `default_status`, and the CSV import fields below |
 | GET/POST | `/api/deals` | List / create |
+| POST | `/api/deals/import-csv` | Import deals from CSV: name (required), value or amount, currency, stage (key or name in `pipeline_id`, the default pipeline when missing, case and accents ignored; Zoho's Closed Won and Closed Lost go to the pipeline's won and lost stages; any other stage refuses the row), expected close date, probability, tags, notes, company by name (created when missing), contact by email. A deal with the same name, company and contact as a live deal or an earlier row is a duplicate. The importing user owns the deals; a won or lost deal moves its contact as creating one does |
 | PUT | `/api/deals/{id}/stage` | Move stage |
 | GET | `/api/deals/tags` | All distinct tags |
 | GET/POST | `/api/tasks` | List (`status`, `assigned_to`, `project_id`) / create |
 | POST | `/api/tasks/{id}/comments` | Add comment |
+
+**CSV import and custom fields (#381)**: the contacts, companies and deals importers map a column onto a custom field when its header is the field's key, its label (case and accents ignored, optionally followed by the unit) or `cf_<key>`; core columns win. Number cells take a decimal comma or point, thousands separators and the field's own unit (12,5 m, 1.250,00, 189000.00); date cells take 2026-05-14 (a time after it is dropped), 14.05.2026 (always day first, whatever `date_format` says), English and German month names (May 14, 2026; 14. Mai 2026; 31. Dez. 2026), and 14/05/2026 or 05/14/2026; two digit years are refused. A cell that reads two ways (1.250, 05/04/2026) is settled by the other cells of its column or by `number_format` (`auto`, `comma`, `dot`) and `date_format` (`auto`, `dmy`, `mdy`, for slashed dates), otherwise reported; a dropdown value must match an option. A file takes up to 20 MB and 50,000 rows (413 beyond). A row with any value that cannot be read is not imported and is listed in `invalid_details` (row, column, value, code, message). `dry_run=true` checks the file and writes nothing; the app always shows that check before importing. The answer also lists `custom_fields_mapped`, `columns_ignored`, `ambiguous_columns` and `formats_needed`.
 
 ### Companies
 
@@ -530,6 +533,7 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 |--------|----------|-------------|
 | GET | `/api/companies` | List companies for the org |
 | POST | `/api/companies` | Create |
+| POST | `/api/companies/import-csv` | Import from CSV, with the CSV import fields below |
 | GET/PUT/DELETE | `/api/companies/{id}` | Read / update / delete |
 | GET | `/api/companies/suggest` | Typeahead from own data (companies + lead/contact `company` distinct values). Param: `q` (≥ 2 chars) |
 | GET | `/api/companies/suggest/ai` | LLM-powered company lookup. Param: `q`. Returns up to 3 candidates with name, domain, industry, location, description. Always tag as "Verify" in the UI |
