@@ -125,7 +125,7 @@
 - **UNYT Token Payments** — Pay with UNYT on Arbitrum via MetaMask or via [UNYT.shop](https://unyt.shop)
 - **License & Billing** — One-time purchase or installment plans via Stripe. UNYT token payments via MetaMask or UNYT.shop. Optional annual maintenance renewal
 - **PWA** — Installable on iOS, Android, and desktop
-- **i18n**: English, German, Spanish and French in the app for every workspace, chosen from the user menu (the public website speaks the same four)
+- **i18n**: English, German, Spanish and French in the app for every workspace, chosen from the user menu (the public website speaks the same four); Italian in the app where a workspace has it switched on
 - **API Keys and Webhooks** — Programmatic access for n8n, Notion, Zapier, and custom integrations
 - **Reporting Engine** — User performance, pipeline forecasts, activity logs, CSV export
 - **Onboarding & Support** — In-app onboarding checklist (localStorage-persisted), training modules, FAQ, in-app support ticket form, legal docs
