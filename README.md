@@ -191,7 +191,9 @@ The price list names five components (decision of 21 October 2026, issue #524). 
 | Signing | €5,000, from the day it is switched on |
 | ERP | sold by hand, talk to us |
 
-Unlimited users on bought licences, source code included. Maintenance and support cost 12% of the purchased licence value per year (the bought prices of the components you paid for), minimum €999, and are optional: skip the renewal and your instance keeps running, you only stop receiving updates. The 30-day money-back guarantee applies to bought licences.
+Unlimited users on bought licences, source code included. Maintenance and support cost 12% of the purchased licence value per year (the bought prices of the components you paid for), minimum €999, and are optional: without them your instance keeps running on the version you bought. The 30-day money-back guarantee applies to bought licences.
+
+**Updates come with maintenance** (decided by Florian on 5 November 2026, issue #690): a bought licence no longer carries 12 months of updates by itself. The pricing page offers the first year of maintenance with the purchase (a checkbox; `POST /api/checkout/components` with `with_maintenance`, one more line on the same Stripe checkout, priced by `catalogue_core.maintenance_eur`), and the purchase then carries updates for 12 months from the day it is bought; without it the update window ends at the purchase, and maintenance can be added any time from Settings (`POST /api/license/renew-maintenance`, which extends from today). Hosted instances include updates and never take it. A workspace that already holds a licence has one update date for everything it bought, so the checkout refuses maintenance with its further purchases and sends it to the renewal, priced on everything bought; a first year that reaches a licensed workspace anyway (a guest purchase claimed onto it) buys only the share of a year its price covers. A refund within the 30 days takes back the window the purchase granted. A year of maintenance is 365 days, at purchase and at renewal. Licences sold before keep exactly the window they were sold with: no stored row is rewritten, a guest licence claimed onto a workspace later carries its own window, and a sale made under the earlier terms (a checkout or UNYT order opened before the change and paid after it) still gets its 12 months; a page still showing the earlier terms is asked to reload before it can buy. The terms (version 2026-11-05), the licence document, the purchase emails, the help centre and the app say the same.
 
 **Hosted (per user per month, net)**
 
@@ -667,7 +669,7 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/license/renew-maintenance` | Start Stripe checkout for the €999 annual maintenance SKU |
+| POST | `/api/license/renew-maintenance` | Start Stripe checkout to add or renew a year of maintenance (12% of the purchased licence value, minimum €999); it extends the update window from today or from its current end |
 | POST | `/api/license/download` | Issue a short-lived signed token for downloading the current release |
 | GET | `/api/license/download/{token}` | Redeem the signed token; streams the tarball from `DISTRIBUTION_DIR` |
 | GET | `/api/version/latest` | Latest tagged version (public, no auth) |
