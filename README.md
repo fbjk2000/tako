@@ -299,7 +299,7 @@ What it strips:
 
 Inline platform-only code is stripped via sentinel markers `DEMO_BEGIN`/`DEMO_END` and `PLATFORM_BEGIN`/`PLATFORM_END` (matched as `(?P<kind>DEMO|PLATFORM)_BEGIN` … `(?P=kind)_END`) — the pairs must stay matched. A verification gate (brand-residue grep + required/forbidden file checks) fails the build rather than emit a dirty package. New platform-only pages must be added to `PLATFORM_STUB_PAGES` in the script.
 
-Per-client frontend variants: put whole-file overrides under `clients/<name>/overlay/**` (see `clients/README.md`) and build with `--client <name>`. Publishing to the client downloads page (`tako.software/downloads`): `scripts/publish-downloads.sh`. Process docs: `docs/handover/RELEASE-PROCESS.md`.
+Per-client frontend variants: put whole-file overrides under `clients/<name>/overlay/**` (see `clients/README.md`) and build with `--client <name>`. The shared password downloads page (`tako.software/downloads`) is retired (#750): customers download from their account or by email from `/download-link`, and `release.yml` stages every base package on the running instance. Process docs: `docs/handover/RELEASE-PROCESS.md`.
 
 ### Release workflow
 
@@ -686,12 +686,14 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/license/renew-maintenance` | Start Stripe checkout to add or renew a year of maintenance (12% of the purchased licence value, minimum €999); it extends the update window from today or from its current end |
-| POST | `/api/license/download` | Issue a short-lived signed token for downloading the current release |
-| GET | `/api/license/download/{token}` | Redeem the signed token; streams the tarball from `DISTRIBUTION_DIR` |
+| GET | `/api/license/releases` | The releases the platform serves (the current build and every earlier base tarball kept in `DISTRIBUTION_DIR`), each marked downloadable or requiring active maintenance for the caller's workspace |
+| POST | `/api/license/download` | Issue a short-lived signed token for one release (`version`, or the newest the workspace may download); a release published after the workspace's maintenance ended is refused with `requires_active_maintenance` (#750) |
+| GET | `/api/license/download/{token}` | Redeem the signed token; checks the licence and the maintenance again, then streams that release's tarball from `DISTRIBUTION_DIR` |
 | GET | `/api/version/latest` | Latest tagged version (public, no auth) |
 | GET | `/api/version/check` | Per-caller version comparison (`current` vs `latest`, `update_available` flag) |
 | GET | `/api/releases` | Last 20 releases, newest first (public — powers `/changelog`) |
 | POST | `/api/admin/releases/notify` | Platform-only. Records a release and emails the customers whose maintenance is active; the release workflow performs the same writes over SSH with `python -m release_notify` |
+| PUT | `/api/admin/releases/{version}/critical-security` | Platform-only, super admin and deputy. Flags a recorded release as a critical security release, downloadable by every licence holder whatever their maintenance (#750), or takes the flag off; every change is audit logged |
 | GET | `/api/system/update-check` | Customer instance → platform daily check; 24h per-org cache |
 
 ### Public surfaces (no auth)
@@ -1768,7 +1770,7 @@ The project detail dialog is gone; every project now opens a full **workspace pa
 
 - **Distribution builder brought current** — `scripts/build-distribution.sh` had drifted since April: internal `docs/` and `.github/` were shipping to customers, the route-strip regexes had rotted, and the prerender postbuild broke the stage build. Platform pages are now replaced with redirect **stubs** (no route surgery), internal paths are excluded with a small docs whitelist, and a **hard verification gate** (brand-residue grep, required/forbidden files) refuses to emit a dirty package. Packages now include `Caddyfile.example`, a per-client-stamped `LICENSE.md`, and corrected env templates (incl. both Resend webhook secrets).
 - **Per-client builds** — `--client <name>` applies `clients/<name>/overlay/**` over the stage before the frontend build, so client-specific frontend variants compile into the shipped bundle. Per-client handover records live in `clients/<name>/CLIENT.md`; process docs in `docs/handover/`.
-- **Client downloads page** — `tako.software/downloads` → password-protected page carrying the latest package + sha256 + install guide, published via `scripts/publish-downloads.sh` (full-replace deploy: the page always serves exactly the latest release).
+- **Client downloads page**: retired on 6 November 2026 (#750, downloads come with maintenance). `tako.software/downloads` now lands on `/download-link`, which points to the customer's account and the emailed link; both apply the maintenance rule.
 
 ### Mid June 2026 — Booking settings made wipe-proof
 
