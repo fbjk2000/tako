@@ -48,7 +48,7 @@
 - **Campaigns** — Multi-channel (Email via Resend + Kit.com, Facebook, Instagram, LinkedIn), rich email editor (subject + Markdown body + live HTML preview + AI draft), AI-powered drafting (purpose + tone), channel picker on create, social campaigns linked to Listeners. **Per-recipient delivery tracking** with status pills (delivered, bounced, recipient_unknown, inbox_full, deferred, failed, replied, opted_out, pending) driven by Resend webhooks; aggregate counts denormalised on the campaign for cheap list rendering. **Send-batch semantics**: a "Send" only mails recipients whose row status is `pending` — already-delivered/bounced/replied rows are skipped, so adding new people to a sent campaign and pressing Send again only mails the new ones (no re-spam path). **Pending vs Deferred are separate aggregates**: the UI exposes a "Retry N deferred" button (orange band) distinct from "Send to N pending" so operator intent stays explicit. **Provider-safe pacing** — `RESEND_SEND_DELAY_S` (default 250ms ≈ 4 sends/sec) keeps batches under Resend's request-per-second limit. **Add to campaign from Lead detail** — single-lead button on the Lead detail dialog plus the existing bulk-list flow. **Closed-loop replies** — inbound replies are received via Resend Inbound, matched back to the recipient row OR to the underlying lead (via from-address) for transactional sends that bypassed campaigns, and surfaced inline with the full body (fetched from Resend's `/emails/receiving/{id}` API; HTML-only replies render sanitized via DOMPurify when no plain-text part is present). **Self-sourced loop guard** drops inbounds from our own sender domain (bounces, auto-replies, forwarded copies) so they don't overwrite `last_reply_from`. **BCC outbound capture** logs operator replies sent from their own mail client when they BCC `tako@tako.software`, with sender identification via user email or `email_aliases`. **AI suggestions on replies** classify intent (interested / objection / not_now / out_of_office / unsubscribe / question / other), draft a contextual response, and propose follow-up tasks; one-click **Send reply** (with `In-Reply-To` threading) and **Create task** (auto-linked to the lead/deal). **Soft delete + restore** — deleted campaigns + per-recipient history move to /trash; restoring brings the entire send history back intact. **Filter recipients by status** in the detail view. Sent campaigns can be renamed but content stays frozen post-send so history isn't rewritten.
 - **Per-entity History** — Every Lead / Contact / Deal / Company detail dialog has a unified activity timeline aggregating emails sent (with full body + delivery status + provider error), tasks, deals, conversion events, chat activity, and creation/update anchors. Each row drills down to the granular trace; email rows link directly to the relevant Campaign detail.
 - **Listeners** — AI social listening agents: keyword monitoring, Claude-powered hit classification (buying signal / complaint / question / mention / noise), confidence scoring, sentiment, suggested replies, auto task creation, digest reports, Meta Graph poller, Chrome extension device-code pairing
-- **Files** — File upload with AI summarisation (PDF, DOCX, text, images), linked to any entity, one-click task creation from AI suggestions
+- **Files** (rebuilt from November 2026, epic #854, plan `docs/plans/2026-11-09-files-rebuild.md`): a library at `/files` with **folders** you create, nest, rename and move, each shared with everyone in the workspace, with chosen colleagues or kept to yourself (a folder inside a restricted folder is restricted at least as much, admins always have access, and a folder only ever removes access the other rules grant); **versions** of a file with who, when and a note, every version downloadable; **search inside files** from the page's search box (PDF, Word, spreadsheets, text, CSV, JSON and HTML, with the place of the match shown), which returns only files the person could download; a **Files card on every deal, contact and company** with upload by button or by drop; AI summary and one click tasks from its suggestions as before. Behind it: uploads read in chunks up to the workspace limit, programs and scripts refused by content, **malware scanning** by ClamAV on the server (an infected upload is refused, a scanner that is down never blocks an upload, the row says clean or unscanned), each file's bytes stored once per workspace by content (`backend/storage/`), and the record's visibility, the data areas, the HR fence and the folder rule applied wherever a file is reached by id or by list (the page, mail attachments, campaigns, the API, the connector). The text of HR files, recordings and transcripts is never kept for search.
 - **Signing**: a PDF goes to one to five signers who sign one after another through an emailed link, without a TAKO account, by typing or drawing their signature. Templates carry placed fields (signature, initials, date, text, checkbox) per signer role; reminders go out by themselves on day 3 and day 7 of a signer's turn and then weekly until the request expires (30 days by default); Send for signature starts from an upload, a deal (with the deal's contact as first signer and an optional stage to move to on completion), a quote or an employee file. Everyone receives the sealed PDF with an audit certificate. The level is the simple electronic signature under eIDAS. On sale as a component of its own since November (#683, see [Pricing](#pricing)); rollout facts in [`backend/signing/README.md`](backend/signing/README.md).
 
 ### AI Features (Claude)
@@ -657,10 +657,20 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/files/upload` | Upload. Params: `linked_type`, `linked_id`, `description` |
-| GET | `/api/files` | List. Params: `linked_type`, `linked_id` |
+| POST | `/api/files/upload` | Upload. Params: `linked_type`, `linked_id`, `description`, `folder_id`. Refuses programs, scripts and files a malware scan flags |
+| GET | `/api/files` | List. Params: `linked_type`, `linked_id`, `folder_id` (a folder id, or `none` for files in no folder) |
+| GET | `/api/files/search` | Search by name, description and the text inside files. Params: `q` (2 to 200 characters), `limit` (max 50). Each hit carries `match` and `snippet` |
 | GET | `/api/files/{id}/download` | Download |
-| DELETE | `/api/files/{id}` | Delete |
+| DELETE | `/api/files/{id}` | Delete (with its versions) |
+| POST | `/api/files/{id}/versions` | Upload a new version (multipart `file`, optional `note`) |
+| GET | `/api/files/{id}/versions` | The versions, newest first |
+| GET | `/api/files/{id}/versions/{n}/download` | Download one version |
+| GET | `/api/files/folders` | The folders the member can enter, with file counts |
+| POST | `/api/files/folders` | Create. Body: `name`, `parent_id`, `visibility` (`workspace`, `people`, `private`), `member_ids` |
+| PATCH | `/api/files/folders/{id}` | Rename, move or change sharing (owner or admin) |
+| DELETE | `/api/files/folders/{id}` | Delete an empty folder; `?contents=to_parent` moves its contents one level up first |
+| POST | `/api/files/move` | Move files. Body: `file_ids` (1 to 200), `folder_id` or null |
+| GET | `/api/documents/{id}` | One knowledge base document, read only (the page behind the link the connector returns) |
 | POST | `/api/files/{id}/create-tasks` | Create tasks from AI suggestions |
 
 ### Settings
@@ -757,7 +767,7 @@ These endpoints power the marketing site and are public — auth is the absence 
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/health` | 200 when MongoDB is reachable, 503 otherwise. JSON body: Mongo, email, Sentry, Stripe status. |
+| GET | `/api/health` | 200 when MongoDB is reachable, 503 otherwise. JSON body: Mongo, email, Sentry, Stripe status, and `malware_scan` (on, off or unreachable). |
 
 ---
 
@@ -806,7 +816,7 @@ Contacts, companies and deals carry `custom_fields`, an object keyed by field ke
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/files/upload` | Multipart upload. Form fields: `file` (required), `linked_type` (task / project / company / lead / deal / campaign), `linked_id`, `description`, `uploaded_by_name` (defaults to API key owner). Reuses the same `db.files` shape + `UPLOAD_DIR` as in-app uploads, so files appear in the existing Files page |
+| POST | `/api/v1/files/upload` | Multipart upload. Form fields: `file` (required), `linked_type` (task / project / company / lead / deal / campaign), `linked_id`, `description`, `uploaded_by_name` (defaults to API key owner), `folder_id`. Reuses the same `db.files` shape + `UPLOAD_DIR` as in-app uploads, so files appear in the existing Files page; the same door checks apply (programs and scripts refused, malware scan, an unknown `linked_type` is a 400) |
 | GET | `/api/v1/files` | List files for the org. Params: `linked_type`, `linked_id`, `limit` (1..500) |
 
 ### Chat / Capture / Notion / Docs
@@ -907,6 +917,7 @@ For host hardening, backups, health checks, and error monitoring details, see [S
 
 Merged to main and deployed; each item is described in its section above.
 
+- **Files rebuilt** (epic #854): safe uploads and a closed access gap on the upload link (#856), a Files card on deal, contact and company and a page for connector documents (#860), bytes stored once and versions (#863), folders with sharing inside the workspace (#864), the Files page as a library with search inside files (#865), malware scanning (#866).
 - **Video meetings** in TAKO with planning, invitations, guests by link, roles, consent before recording, transcripts and summaries on the record, and huddles in team chat (#688, #689, #691, #694, #695, #696).
 - **Team chat** with threads, files, search, notification settings, incoming hooks (#684) and guests from outside signed in by an email code (#700).
 - **Scout**: market changes that touch a live deal become tasks on that deal (#682).
