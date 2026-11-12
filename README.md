@@ -454,6 +454,9 @@ TAKO_INVOICING_ENABLED=
 TAKO_SIGNING_ENABLED=
 TAKO_HR_ENABLED=
 TAKO_GEO_ENABLED=
+# The CRM is on unless this is set to 0 (TAKO Chat, #888): a deployment that
+# runs chat and meetings without the CRM sets TAKO_CRM_ENABLED=0.
+TAKO_CRM_ENABLED=
 ```
 
 **Frontend** (`/frontend/.env`):
