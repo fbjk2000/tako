@@ -840,6 +840,25 @@ These endpoints power the marketing site and are public — auth is the absence 
 
 Contacts, companies and deals carry `custom_fields`, an object keyed by field key; an admin defines the fields in Settings. Text and dropdown fields take a string. Number fields take a JSON number with a dot for decimals (`12.5`, `189000`); the string `"12.5"` is accepted, while `"12,5"`, `"1.250"` and `"12.5 m"` are refused instead of guessed, and a whole number field refuses decimals. Date fields take `"YYYY-MM-DD"` of a date that exists. `null` or `""` clears a number or date. A value that does not fit is refused with 422 and a message naming the field and the value; nothing is written. **PATCH and PUT replace the whole `custom_fields` object**: send every key you want to keep, or leave `custom_fields` out to keep them all. A field an admin marked required must have a value on POST `/api/v1/contacts`, `/companies` and `/deals`, and a PATCH may not clear one a record holds, including by leaving its key out of `custom_fields` (422 naming the field), while `POST /api/v1/leads` never requires one and keeps an unreadable value in the notes. `GET /api/v1/docs` carries the same rules.
 
+#### Web forms (public intake, no key)
+
+A landing page posts straight to TAKO with a form id and no secret. An owner or admin creates the form in Settings, Integrations, Web forms (name, tags to add, source label, owner of the follow-up task, task title and due rule, optional chat channel for an alert) and copies the snippet: a plain HTML form, a `fetch` call, or a Netlify `submission-created` function for sites that keep Netlify Forms.
+
+```http
+POST /api/forms/{form_id}/submit
+Content-Type: application/x-www-form-urlencoded   # or application/json, or multipart/form-data
+
+email=ada@example.com&name=Ada+Lovelace&company=Acme&phone=%2B49301&message=Please+call&utm_source=newsletter&utm_campaign=launch&src=footer
+```
+
+- Fields: `email` (required), `name` or `first_name` and `last_name`, `company`, `phone`, `message`, any `utm_*` key and `src`. Anything else is ignored.
+- Spam trap: a filled `website` (or Netlify's `bot-field`) field answers like a success and stores nothing.
+- The person is created or updated by email exactly as `POST /api/v1/leads` does it (status New, the form's tags plus `web-form`, the form's source label, and the message, utm values, `src` and the page (Referer) in the notes). The answer is always `{"ok": true}` and never says whether the person was known. The owner gets a follow-up task linked to the contact (due the same day or the next working day), and the chat channel, if set, gets one line.
+- A `redirect` field that points to the same host as the `Referer` is answered `303` to it (for plain HTML forms); otherwise the answer is JSON.
+- Errors: `404` unknown or inactive form, `400` invalid email, `413` body over 32 KB, `415` other content type, `429` over 10 posts a minute per address or 200 a day per form.
+- CORS: `POST` from any origin on this route only, no credentials.
+- Admin routes (session auth, owners and admins): `GET`, `POST /api/settings/web-forms`, `PUT` and `DELETE` (deactivate) `/api/settings/web-forms/{form_id}`.
+
 ### Campaigns (full programmatic loop — Berny et al.)
 
 | Method | Endpoint | Description |
