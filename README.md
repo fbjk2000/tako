@@ -207,7 +207,7 @@ See [`docs/VPS-HARDENING.md`](docs/VPS-HARDENING.md) for the host-level companio
 
 ## Operations
 
-- **Health check** — `GET /api/health` returns a JSON status payload covering MongoDB reachability, email sender readiness, Sentry init, and **Stripe + Resend webhook configuration**. Returns **200** when MongoDB is reachable, **503** when it is not — use it as the target for an external uptime monitor. Sample response: `{"status":"ok","mongo":"connected","email":"configured","sentry":"disabled","stripe_webhooks":"not_configured","resend_webhooks":"configured"}`.
+- **Health check** — `GET /api/health` returns a JSON status payload covering MongoDB reachability, email sender readiness, Sentry init, and **Stripe + Resend webhook configuration**. Returns **200** when MongoDB is reachable, **503** when it is not — use it as the target for an external uptime monitor. Without credentials it answers status, mongo, git_sha and scheduler only; the protection and service fields (email, sentry, stripe_webhooks, resend_webhooks, malware_scan, ...) need the `X-Health-Key` header (env `HEALTH_MONITOR_KEY`) or an instance administrator.
 - **Error monitoring**: Set `SENTRY_DSN` (backend `.env`) and `REACT_APP_SENTRY_DSN` (frontend build env) to enable Sentry. Both are optional soft dependencies — the backend and frontend start without error if the SDK isn't installed or the DSN isn't set. `ENVIRONMENT` / `REACT_APP_ENVIRONMENT` tag events so staging and prod don't pollute each other. Sentry: SDK pin and DSN in phase 2 of the CTO programme (issue #377).
 - **Backups** — `scripts/backup-mongo.sh` dumps MongoDB, tars the output, retains 7 days locally, **and uploads offsite** when configured. Two offsite paths:
   - **S3-compatible** (AWS, MinIO, Wasabi, Backblaze B2, Cloudflare R2): set `BACKUP_S3_BUCKET`, `BACKUP_S3_PREFIX` (optional), `BACKUP_S3_ENDPOINT` (optional, for non-AWS), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`. Requires the `aws` CLI on the host.
@@ -287,7 +287,7 @@ The TAKO backend has the four SKUs hard-coded as `tako_selfhost_once` / `tako_se
      ```
      gh workflow run set-env.yml -f key=STRIPE_WEBHOOK_SECRET -f value=whsec_…
      ```
-4. **Verify**: `curl -s https://<your-domain>/api/health | jq '.stripe_webhooks'` should flip from `not_configured` → `configured`. The Pricing page (`/pricing`) → "Buy now" buttons hit `POST /api/subscriptions/checkout` and redirect to a real Stripe Checkout.
+4. **Verify**: `curl -s -H "X-Health-Key: $HEALTH_MONITOR_KEY" https://<your-domain>/api/health | jq '.stripe_webhooks'` (the detail fields need the key from `HEALTH_MONITOR_KEY`, or a signed-in instance administrator) should flip from `not_configured` → `configured`. The Pricing page (`/pricing`) → "Buy now" buttons hit `POST /api/subscriptions/checkout` and redirect to a real Stripe Checkout.
 
 The four `STRIPE_PRICE_*` ids are also surfaced in `backend/.env.example` — if you prefer manual product creation in Stripe's dashboard, just paste the ids there and skip step 2.
 
