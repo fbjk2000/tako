@@ -122,8 +122,8 @@
 - **Booking meetings** (#676, #813, #909): every approved booking gets a TAKO meeting that can be edited afterwards; a booking type that deliberately uses Google Meet, a fixed link or no video keeps its choice.
 - **Team Chat** — Real-time messaging with five channel kinds:
   - **DMs** — strict 1:1, only the two participants can read (admins blind in the UI; audit log still records when `CHAT_AUDIT_ENABLED`)
-  - **Private groups** — invitation-only, members + org admins; up to 10 members
-  - **Public groups** — anyone in org can read; only members + moderators write
+  - **Private groups** — invitation-only, members + org admins; up to 50 members
+  - **Public groups** — anyone in org can read; only members + moderators write; up to 500 members
   - **Context channels** — auto-created per Lead / Deal / Task / Company / Project
   - **General** — org-wide read+write
   Promote a DM into a named private group when the conversation needs more people. Moderators (subset of members; org admins implicit) can invite, expel, and appoint other moderators.
@@ -629,11 +629,11 @@ All endpoints require: `Authorization: Bearer <jwt_token>` unless otherwise note
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/chat/channels` | Visible channels (DMs filtered to participants; private to members + admins; public/general to all org) |
-| POST | `/api/chat/channels` | Create. Body accepts `kind: "private" \| "public"`, `members`, `moderators` (≤ 10) |
+| POST | `/api/chat/channels` | Create. Body accepts `kind: "private" \| "public"`, `members`, `moderators` (≤ 50 for private, ≤ 500 for public) |
 | GET | `/api/chat/channels/{id}/messages` | Visibility-checked. 403 for non-participants of DMs |
 | POST | `/api/chat/channels/{id}/messages` | Visibility + write check |
 | POST | `/api/chat/dm/{other_user_id}` | Open or get the deterministic 1:1 DM (idempotent) |
-| POST | `/api/chat/channels/{id}/promote` | Promote a DM to a named private group (≤ 10 members; one-way) |
+| POST | `/api/chat/channels/{id}/promote` | Promote a DM to a named private group (≤ 50 members; one-way) |
 | POST | `/api/chat/channels/{id}/members` | Add member (mods + admins only) |
 | DELETE | `/api/chat/channels/{id}/members/{user_id\|"me"}` | Expel (mod) / self-leave (anyone) |
 | POST | `/api/chat/channels/{id}/moderators` | Appoint moderator (any moderator can; admins implicit) |
@@ -2062,7 +2062,7 @@ The biggest single push in the project's life. Roughly: turned campaigns from a 
 - **Per-entity History timeline** — new `GET /api/entity/{type}/{id}/history` aggregates email events (with full body), tasks, deals, conversion events, chat summary, plus creation/update anchors. `<HistoryTimeline>` component drops into Lead / Contact / Deal / Company detail dialogs with filter chips and per-row drill-down.
 - **`/v1` write surface complete** — `tako_...` API keys now cover the full programmatic outbound loop: PUT lead, POST/PUT contact, full campaigns CRUD, send, recipients, bulk add-to-campaign. Field whitelists + per-org isolation preserved.
 - **Multi-agent `sender_id`** — `/v1/chat/messages` now honors `sender_id` from the body so multiple AI agents (Maestro, Berny, etc.) sharing one API key post under their own user identities. Cross-org `sender_id` rejected with a deliberately ambiguous 400.
-- **Chat overhaul** — five channel kinds (`general` / `public` / `private` / `dm` / `context`), explicit `members` + `moderators` roles, deterministic-id 1:1 DMs (`POST /api/chat/dm/{user_id}` is idempotent), promote-DM-to-named-private-group flow (≤ 10 members, one-way), full member/moderator management UI, visibility enforcement on every read path. `chat_audit` collection records every event; super-admin viewer at `/admin/chat/audit` with filters, includes DM content for forensics. `CHAT_AUDIT_ENABLED=false` env flag for restricted regions.
+- **Chat overhaul** — five channel kinds (`general` / `public` / `private` / `dm` / `context`), explicit `members` + `moderators` roles, deterministic-id 1:1 DMs (`POST /api/chat/dm/{user_id}` is idempotent), promote-DM-to-named-private-group flow (≤ 50 members, one-way), full member/moderator management UI, visibility enforcement on every read path. `chat_audit` collection records every event; super-admin viewer at `/admin/chat/audit` with filters, includes DM content for forensics. `CHAT_AUDIT_ENABLED=false` env flag for restricted regions.
 - **Chat unread indicators** — new `chat_read_state` collection (per-user, per-channel `last_read_at`, unique index). `GET /api/chat/channels` decorates each channel with `unread_count`; `POST /api/chat/channels/{cid}/read` marks read up to now; `GET /api/notifications` adds top-level `chat_unread_count`. Sidebar shows a small red pill (capped at 9+) next to every channel with unread, and bolds the name. The topbar bell lights up on new chat traffic and shows a single pinned "N new chat messages" row in its dropdown. Lazy-init on first GET sets `last_read_at = now` so existing users start clean (no flood of "99+" dots on rollout).
 - **AI-native company picker** — typeahead in the Add Company dialog merges hits from your own data (existing companies + names referenced on leads/contacts) with Claude lookups (`/api/companies/suggest` + `/api/companies/suggest/ai`). Existing record clicks open the record instead of creating a duplicate.
 - **AI Enrich for companies** — single (`POST /api/ai/enrich-company/{id}`) and bulk (`POST /api/bulk/enrich` with `entity_type=company`). Fills only empty fields; full enrichment payload (founded year, HQ, competitors, products, tags) stored under `enrichment` with a "Verify" pill in the UI.
